@@ -59,7 +59,6 @@ export default function CrorepatiChallengePage() {
     setCurrentQuestionIndex(0);
     setActiveTeamIndex(0);
     setGamePhase('PLAYING');
-    // Reset game-specific states for a fresh game
     setAnswerRevealed(false);
     setSelectedAnswer(null);
     setFiftyFiftyUsed(false);
@@ -67,7 +66,6 @@ export default function CrorepatiChallengePage() {
     setShowAudiencePoll(false);
     setAudiencePollData(null);
     setShowPhoneAFriend(false);
-    // Timer will be reset by the useEffect watching currentQuestion and gamePhase
   }, [
     setTeams, 
     setCurrentQuestionIndex, 
@@ -87,7 +85,6 @@ export default function CrorepatiChallengePage() {
     audio.preload = 'auto';
   
     const onCanPlayThrough = () => {
-      // console.log("Audio can play through."); // For debugging
       if (audio) {
         timerTickAudioRef.current = audio;
         setIsAudioInitialized(true);
@@ -96,7 +93,6 @@ export default function CrorepatiChallengePage() {
     
     const onError = (e: Event) => {
       console.error("Audio loading error (raw event):", e);
-      
       const audioElement = e.target as HTMLAudioElement | null;
       if (audioElement && audioElement.error) {
         console.error("Audio Element Error Code:", audioElement.error.code);
@@ -112,18 +108,17 @@ export default function CrorepatiChallengePage() {
   
     audio.addEventListener('canplaythrough', onCanPlayThrough);
     audio.addEventListener('error', onError);
-    
     audio.load(); 
   
     return () => {
-      if (audio) {
-        audio.removeEventListener('canplaythrough', onCanPlayThrough);
-        audio.removeEventListener('error', onError);
-        audio.pause();
-        audio.currentTime = 0; 
+      if (timerTickAudioRef.current) {
+        timerTickAudioRef.current.pause();
+        timerTickAudioRef.current.currentTime = 0; 
       }
       timerTickAudioRef.current = null; 
       setIsAudioInitialized(false); 
+      audio.removeEventListener('canplaythrough', onCanPlayThrough); // Cleanup listeners
+      audio.removeEventListener('error', onError);
     };
   }, []);
 
@@ -152,18 +147,35 @@ export default function CrorepatiChallengePage() {
     }
   }, [gamePhase, loadQuestions]);
   
+  // Effect to start timer and audio when a new question is presented
   useEffect(() => {
-    if (gamePhase === 'PLAYING' && currentQuestion && !timerActive && !answerRevealed) {
+    if (gamePhase === 'PLAYING' && currentQuestion) {
       setTimeLeft(currentQuestion.timeLimit);
-      setTimerActive(true);
       setSelectedAnswer(null);
+      setAnswerRevealed(false); // Ensure answer is not revealed for new question
+      setFiftyFiftyUsed(false); 
+      setFiftyFiftyOptions(null);
+      setShowAudiencePoll(false);
+      setShowPhoneAFriend(false);
+      setTimerActive(true); // Start the timer
+
+      if (isAudioInitialized && timerTickAudioRef.current) {
+        timerTickAudioRef.current.pause(); // Stop any previous playback
+        timerTickAudioRef.current.currentTime = 0;
+        timerTickAudioRef.current.play().catch(error => console.error("Error playing timer sound:", error));
+      }
     }
-  }, [gamePhase, currentQuestion, timerActive, answerRevealed]);
+  }, [gamePhase, currentQuestion, activeTeamIndex, isAudioInitialized]); // Reruns when question or active team changes
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || !timerActive) return;
 
     setTimerActive(false); 
+    if (isAudioInitialized && timerTickAudioRef.current) {
+      timerTickAudioRef.current.pause();
+      timerTickAudioRef.current.currentTime = 0;
+    }
+
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
 
@@ -180,11 +192,7 @@ export default function CrorepatiChallengePage() {
       }
       
       setTimeout(() => {
-        setAnswerRevealed(false);
-        setSelectedAnswer(null);
-        setFiftyFiftyUsed(false); 
-        setFiftyFiftyOptions(null); 
-
+        // States like answerRevealed, selectedAnswer, fiftyFifty are reset by the question start useEffect
         const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
         setActiveTeamIndex(nextTeamIndex);
 
@@ -197,43 +205,26 @@ export default function CrorepatiChallengePage() {
         }
       }, 2000); 
     }, 1500);
-  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, activeTeamIndex, teams, currentQuestionIndex, questions, gamePhase, setGamePhase, setTeams, setActiveTeamIndex, setCurrentQuestionIndex]);
+  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, activeTeamIndex, teams, currentQuestionIndex, questions, gamePhase, setGamePhase, setTeams, setActiveTeamIndex, setCurrentQuestionIndex, isAudioInitialized]);
   
 
+  // Effect for timer countdown
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
   
     if (timerActive && timeLeft > 0) {
       intervalId = setInterval(() => {
-        if (isAudioInitialized && timerTickAudioRef.current) {
-          // For short "tick" sounds that should play every second,
-          // resetting currentTime ensures it plays from the beginning each time.
-          timerTickAudioRef.current.currentTime = 0;
-          timerTickAudioRef.current.play().catch(error => console.error("Error playing tick sound:", error));
-        }
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
     } else if (timerActive && timeLeft === 0) { // Timer ran out
-      if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.currentTime = 0; 
-      }
+      // Audio stop is handled by handleAnswerSelect being called
       handleAnswerSelect(null); 
-    } else if (!timerActive) { // Timer stopped for other reasons (answer selected, etc.)
-      if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.pause(); 
-        timerTickAudioRef.current.currentTime = 0; 
-      }
     }
   
     return () => {
       clearInterval(intervalId);
-      if (timerTickAudioRef.current) {
-          timerTickAudioRef.current.pause();
-          timerTickAudioRef.current.currentTime = 0; 
-      }
     };
-  }, [timerActive, timeLeft, isAudioInitialized, handleAnswerSelect]);
+  }, [timerActive, timeLeft, handleAnswerSelect]);
 
 
   const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll') => {
@@ -341,7 +332,6 @@ export default function CrorepatiChallengePage() {
           setTeams([]); 
           setCurrentQuestionIndex(0);
           setActiveTeamIndex(0);
-          // Other states are reset by handleStartGame or useEffects
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
