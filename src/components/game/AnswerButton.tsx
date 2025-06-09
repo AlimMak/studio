@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Diamond } from 'lucide-react';
 
 interface AnswerButtonProps {
   optionText: string;
@@ -23,28 +23,53 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
   reveal,
   index,
 }) => {
-  const getButtonClass = () => {
+  const getShapeColors = () => {
     if (reveal) {
-      if (isCorrect) return 'bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] opacity-100 text-[hsl(var(--success-foreground))] animate-pulse-correct';
-      if (isSelected && !isCorrect) return 'bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-pulse-incorrect';
-      return 'bg-muted hover:bg-muted/80 text-muted-foreground';
+      if (isCorrect) return { fill: 'hsl(var(--success))', stroke: 'hsl(var(--success))', text: 'text-success-foreground' };
+      if (isSelected && !isCorrect) return { fill: 'hsl(var(--destructive))', stroke: 'hsl(var(--destructive))', text: 'text-destructive-foreground' };
+      return { fill: 'hsl(var(--muted))', stroke: 'hsl(var(--muted-foreground))', text: 'text-muted-foreground' };
     }
-    if (isSelected) return 'bg-primary/80 hover:bg-primary/70 text-primary-foreground ring-2 ring-accent';
-    return 'bg-primary hover:bg-primary/90 text-primary-foreground';
+    if (isSelected) return { fill: 'hsl(var(--card))', stroke: 'hsl(var(--accent))', text: 'text-accent-foreground' }; // Gold/Accent for selected
+    return { fill: 'hsl(var(--card))', stroke: 'hsl(274 100% 35%)', text: 'text-foreground' }; // Default KBC Purple border
   };
 
+  const { fill, stroke, text: textColor } = getShapeColors();
+  constisDisabledOrRevealed = disabled || (reveal && !(isSelected && !isCorrect) && !isCorrect);
+
+
   return (
-    <Button
+    <button
       onClick={onClick}
-      disabled={disabled || reveal}
+      disabled={isDisabledOrRevealed}
       className={cn(
-        "w-full justify-start text-left h-auto py-3 px-4 whitespace-normal break-words transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md text-base md:text-lg",
-        getButtonClass()
+        "w-full h-[60px] md:h-[70px] relative group transition-opacity duration-300",
+        isDisabledOrRevealed && !isCorrect && "opacity-50 cursor-not-allowed",
+        (reveal && isCorrect) && "animate-pulse-correct",
+        (reveal && isSelected && !isCorrect) && "animate-pulse-incorrect"
       )}
-      variant="default"
+      aria-label={`Option ${optionLetters[index]}: ${optionText}`}
     >
-      <span className="font-bold mr-2 text-accent">{optionLetters[index]}:</span> {optionText}
-    </Button>
+      <svg
+        className="absolute top-0 left-0 w-full h-full"
+        viewBox="0 0 300 50" // Adjusted viewBox
+        preserveAspectRatio="none"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth="2"
+      >
+        {/* Elongated hexagon path */}
+        <path d="M 15 0 L 285 0 L 300 25 L 285 50 L 15 50 L 0 25 Z" />
+      </svg>
+      
+      <div className={cn("relative z-10 flex items-center w-full h-full px-4 md:px-6", textColor)}>
+        {/* Left Diamond and Letter */}
+        <div className="flex items-center mr-3 md:mr-4">
+          <Diamond className="w-3 h-3 md:w-4 md:h-4 text-white fill-white mr-2" />
+          <span className="font-bold text-sm md:text-base text-white">{optionLetters[index]}</span>
+        </div>
+        <span className="text-sm md:text-base text-left flex-1 truncate">{optionText}</span>
+      </div>
+    </button>
   );
 };
 

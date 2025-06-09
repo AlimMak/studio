@@ -1,51 +1,55 @@
 import React from 'react';
 import type { Question } from '@/lib/types';
-import AnswerButton from './AnswerButton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { HelpCircle } from 'lucide-react';
+import { Diamond } from 'lucide-react'; // Using Diamond for the motif
 
 interface QuestionDisplayProps {
   question: Question;
-  onAnswerSelect: (optionIndex: number) => void;
-  selectedAnswer: number | null;
-  revealAnswer: boolean;
-  disabledOptions?: number[];
-  isAnswerDisabled: boolean;
+  onAnswerSelect: (optionIndex: number) => void; // Kept for consistency, though not used here
+  selectedAnswer: number | null; // Kept for consistency
+  revealAnswer: boolean; // Kept for consistency
+  disabledOptions?: number[]; // Kept for consistency
+  isAnswerDisabled: boolean; // Kept for consistency
 }
+
+const QuestionShape: React.FC<{ text: string }> = ({ text }) => {
+  return (
+    <div className="relative w-full h-[70px] md:h-[80px] my-4">
+      <svg
+        className="absolute top-0 left-0 w-full h-full"
+        viewBox="0 0 400 60" // Adjusted viewBox for better aspect ratio
+        preserveAspectRatio="none"
+        fill="hsl(var(--card))" 
+        stroke="hsl(274 100% 35%)" // KBC Purple Border
+        strokeWidth="2"
+      >
+        <path d="M 20 0 L 380 0 L 400 30 L 380 60 L 20 60 L 0 30 Z" />
+      </svg>
+      {/* Left Diamond */}
+      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+        <Diamond className="w-4 h-4 text-white fill-white" />
+      </div>
+      {/* Right Diamond */}
+      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+        <Diamond className="w-4 h-4 text-white fill-white" />
+      </div>
+      <div className="relative z-10 flex items-center justify-center w-full h-full px-10">
+        <p className="text-lg md:text-xl text-center text-foreground font-semibold">
+          {text}
+        </p>
+      </div>
+    </div>
+  );
+};
 
 const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   question,
-  onAnswerSelect,
-  selectedAnswer,
-  revealAnswer,
-  disabledOptions = [],
-  isAnswerDisabled,
 }) => {
   return (
-    <Card className="w-full shadow-xl border-2 border-primary/50 bg-card">
-      <CardHeader className="text-center pb-4">
-        <CardTitle className="text-2xl md:text-3xl font-headline text-primary flex items-center justify-center gap-2">
-           <HelpCircle className="w-8 h-8 text-accent" /> Question for ${question.moneyValue.toLocaleString()}
-        </CardTitle>
-        <CardDescription className="text-lg md:text-xl mt-2 px-4 py-6 bg-primary/10 rounded-lg shadow-inner text-foreground min-h-[100px] flex items-center justify-center">
-          {question.text}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-6">
-        {question.options.map((option, index) => (
-          <AnswerButton
-            key={index}
-            index={index}
-            optionText={option}
-            onClick={() => onAnswerSelect(index)}
-            disabled={isAnswerDisabled || disabledOptions.includes(index)}
-            isSelected={selectedAnswer === index}
-            isCorrect={index === question.correctAnswerIndex}
-            reveal={revealAnswer}
-          />
-        ))}
-      </CardContent>
-    </Card>
+    <div className="w-full flex flex-col items-center">
+      {/* Removed Question for $... title as per new design */}
+      <QuestionShape text={question.text} />
+      {/* Answer buttons will be rendered by the parent through a different component or mapping directly */}
+    </div>
   );
 };
 

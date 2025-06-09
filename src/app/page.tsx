@@ -9,6 +9,7 @@ import { generateQuestionVariation } from '@/ai/flows/question-variation';
 import TeamSetupForm from '@/components/game/TeamSetupForm';
 import Scoreboard from '@/components/game/Scoreboard';
 import QuestionDisplay from '@/components/game/QuestionDisplay';
+import AnswerButton from '@/components/game/AnswerButton'; // Import AnswerButton
 import TimerDisplay from '@/components/game/TimerDisplay';
 import LifelineControls from '@/components/game/LifelineControls';
 import AudiencePollResults from '@/components/game/AudiencePollResults';
@@ -33,7 +34,7 @@ export default function CrorepatiChallengePage() {
   
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerRevealed, setAnswerRevealed] = useState(false);
-  const [fiftyFiftyUsed, setFiftyFiftyUsed] = useState(false);
+  const [fiftyFiftyUsedThisTurn, setFiftyFiftyUsedThisTurn] = useState(false); // Renamed to reflect per-turn usage
   const [fiftyFiftyOptions, setFiftyFiftyOptions] = useState<number[] | null>(null);
 
   const [showAudiencePoll, setShowAudiencePoll] = useState(false);
@@ -61,7 +62,7 @@ export default function CrorepatiChallengePage() {
     setGamePhase('PLAYING');
     setAnswerRevealed(false);
     setSelectedAnswer(null);
-    setFiftyFiftyUsed(false);
+    setFiftyFiftyUsedThisTurn(false);
     setFiftyFiftyOptions(null);
     setShowAudiencePoll(false);
     setAudiencePollData(null);
@@ -73,7 +74,7 @@ export default function CrorepatiChallengePage() {
     setGamePhase,
     setAnswerRevealed,
     setSelectedAnswer,
-    setFiftyFiftyUsed,
+    setFiftyFiftyUsedThisTurn, // Updated
     setFiftyFiftyOptions,
     setShowAudiencePoll,
     setAudiencePollData,
@@ -142,7 +143,7 @@ export default function CrorepatiChallengePage() {
       setTimeLeft(currentQuestion.timeLimit);
       setSelectedAnswer(null);
       setAnswerRevealed(false); 
-      setFiftyFiftyUsed(false); 
+      setFiftyFiftyUsedThisTurn(false); // Reset per turn
       setFiftyFiftyOptions(null);
       setShowAudiencePoll(false);
       setShowPhoneAFriend(false);
@@ -164,7 +165,7 @@ export default function CrorepatiChallengePage() {
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || !timerActive) return;
+    if (answerRevealed || !timerActive || optionIndex === null) return; // Ensure optionIndex is not null
 
     setTimerActive(false); 
     if (isAudioInitialized && timerTickAudioRef.current) {
@@ -186,7 +187,6 @@ export default function CrorepatiChallengePage() {
       } else {
          toast({ title: "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
       }
-      // Game will now pause here until "Continue" button is pressed.
     }, 1500);
   }, [
     answerRevealed, 
@@ -195,8 +195,6 @@ export default function CrorepatiChallengePage() {
     activeTeam, 
     toast, 
     isAudioInitialized,
-    // Removed dependencies that were for auto-advancement
-    // activeTeamIndex, teams, currentQuestionIndex, questions, setGamePhase, setActiveTeamIndex, setCurrentQuestionIndex
   ]);
   
   const proceedToNextTurnOrQuestion = useCallback(() => {
@@ -205,7 +203,7 @@ export default function CrorepatiChallengePage() {
     const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
     setActiveTeamIndex(nextTeamIndex);
 
-    if (nextTeamIndex === 0) { // A full round of teams has answered this question
+    if (nextTeamIndex === 0) { 
       if (currentQuestionIndex + 1 < questions.length) {
         setCurrentQuestionIndex(prev => prev + 1);
       } else {
@@ -216,15 +214,11 @@ export default function CrorepatiChallengePage() {
         }
       }
     }
-    // The useEffect listening to activeTeamIndex/currentQuestionIndex will reset other states
-    // like selectedAnswer, answerRevealed, fiftyFiftyOptions, etc.
-    // Forcing answerRevealed to false here ensures the effect will run correctly.
     setAnswerRevealed(false); 
 
   }, [answerRevealed, gamePhase, activeTeamIndex, teams, currentQuestionIndex, questions.length, setGamePhase, setActiveTeamIndex, setCurrentQuestionIndex, isAudioInitialized]);
 
 
-  // Effect for timer countdown
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
   
@@ -233,7 +227,7 @@ export default function CrorepatiChallengePage() {
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
     } else if (timerActive && timeLeft === 0) { 
-      handleAnswerSelect(null); 
+      handleAnswerSelect(null); // Pass null for timeout
     }
   
     return () => {
@@ -254,7 +248,7 @@ export default function CrorepatiChallengePage() {
     setTeams(newTeams);
 
     if (type === 'fiftyFifty') {
-      setFiftyFiftyUsed(true);
+      setFiftyFiftyUsedThisTurn(true); // Mark as used for the current turn
       const correctAnswer = currentQuestion.correctAnswerIndex;
       const incorrectOptions = currentQuestion.options
         .map((_, i) => i)
@@ -316,7 +310,8 @@ export default function CrorepatiChallengePage() {
   
   const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll'): boolean => {
       if(!activeTeam) return true;
-      return !activeTeam.lifelines[type] || answerRevealed || !timerActive || (type === 'fiftyFifty' && fiftyFiftyUsed);
+      // Check if lifeline has been used by the team OR if 50:50 has been used this specific turn
+      return !activeTeam.lifelines[type] || answerRevealed || !timerActive || (type === 'fiftyFifty' && fiftyFiftyUsedThisTurn);
   }
 
   if (gamePhase === 'SETUP') {
@@ -349,7 +344,7 @@ export default function CrorepatiChallengePage() {
           setActiveTeamIndex(0);
           setAnswerRevealed(false);
           setSelectedAnswer(null);
-          setFiftyFiftyUsed(false);
+          setFiftyFiftyUsedThisTurn(false);
           setFiftyFiftyOptions(null);
           setShowAudiencePoll(false);
           setAudiencePollData(null);
@@ -375,35 +370,64 @@ export default function CrorepatiChallengePage() {
   }
   
   return (
-    <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow">
-      <header className="w-full mb-6">
+    <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
+      <header className="w-full mb-2 md:mb-4">
         <GameLogo size="small" />
       </header>
-      <div className="w-full flex flex-col md:flex-row gap-6 items-start">
-        <div className="w-full md:w-1/3 lg:w-1/4 order-2 md:order-1">
-          <Scoreboard teams={teams} activeTeamId={activeTeam.id} />
-          <LifelineControls activeTeam={activeTeam} onUseLifeline={handleUseLifeline} disabled={answerRevealed || !timerActive || !currentQuestion} />
+      
+      <div className="w-full flex flex-col items-center max-w-3xl mx-auto"> {/* Centering content */}
+        <div className="w-full mb-2 md:mb-4">
+         {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
         </div>
 
-        <div className="w-full md:w-2/3 lg:w-3/4 order-1 md:order-2 space-y-6">
-          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
+        <div className="w-full mb-4 md:mb-6">
           {currentQuestion && <QuestionDisplay
             question={currentQuestion}
-            onAnswerSelect={handleAnswerSelect}
+            onAnswerSelect={handleAnswerSelect} // Props kept for type consistency
             selectedAnswer={selectedAnswer}
             revealAnswer={answerRevealed}
-            disabledOptions={fiftyFiftyOptions || []} 
             isAnswerDisabled={answerRevealed || !timerActive}
           />}
-          {answerRevealed && gamePhase === 'PLAYING' && (
-            <div className="flex justify-center mt-4">
+        </div>
+
+        {/* Answer Buttons Grid */}
+        {currentQuestion && (
+          <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+            {currentQuestion.options.map((option, index) => (
+              <AnswerButton
+                key={index}
+                index={index}
+                optionText={option}
+                onClick={() => handleAnswerSelect(index)}
+                disabled={answerRevealed || !timerActive || (fiftyFiftyOptions?.includes(index) ?? false)}
+                isSelected={selectedAnswer === index}
+                isCorrect={index === currentQuestion.correctAnswerIndex}
+                reveal={answerRevealed}
+              />
+            ))}
+          </div>
+        )}
+        
+        {answerRevealed && gamePhase === 'PLAYING' && (
+            <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
               <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
                 Continue <ChevronRight className="ml-2 w-5 h-5" />
               </Button>
             </div>
-          )}
+        )}
+
+        <div className="w-full md:w-3/4 lg:w-2/3"> {/* Lifelines and Scoreboard container */}
+          <LifelineControls 
+            activeTeam={activeTeam} 
+            onUseLifeline={handleUseLifeline} 
+            disabled={answerRevealed || !timerActive || !currentQuestion} 
+          />
+          <div className="mt-6"> {/* Scoreboard below lifelines */}
+            <Scoreboard teams={teams} activeTeamId={activeTeam.id} />
+          </div>
         </div>
       </div>
+
 
       <Dialog open={showAudiencePoll} onOpenChange={setShowAudiencePoll}>
         <DialogContent className="max-w-lg">
@@ -441,6 +465,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-    
-
-    
