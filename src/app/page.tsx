@@ -87,6 +87,7 @@ export default function CrorepatiChallengePage() {
     audio.preload = 'auto';
   
     const onCanPlayThrough = () => {
+      // console.log("Audio can play through."); // For debugging
       if (audio) {
         timerTickAudioRef.current = audio;
         setIsAudioInitialized(true);
@@ -170,9 +171,9 @@ export default function CrorepatiChallengePage() {
     
     setTimeout(() => {
       if (isCorrect) {
-        toast({ title: "Correct!", description: `+ $${currentQuestion.moneyValue.toLocaleString()}`, variant: "default", duration: 2000 });
+        toast({ title: "Correct!", description: `+ $${currentQuestion?.moneyValue?.toLocaleString() || 0}`, variant: "default", duration: 2000 });
         setTeams(prevTeams => prevTeams.map(team => 
-          team.id === activeTeam.id ? { ...team, score: team.score + currentQuestion.moneyValue } : team
+          team.id === activeTeam?.id ? { ...team, score: team.score + (currentQuestion?.moneyValue || 0) } : team
         ));
       } else {
          toast({ title: "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
@@ -205,7 +206,9 @@ export default function CrorepatiChallengePage() {
     if (timerActive && timeLeft > 0) {
       intervalId = setInterval(() => {
         if (isAudioInitialized && timerTickAudioRef.current) {
-          // Do NOT reset currentTime here for continuous play / repeated short sound
+          // For short "tick" sounds that should play every second,
+          // resetting currentTime ensures it plays from the beginning each time.
+          timerTickAudioRef.current.currentTime = 0;
           timerTickAudioRef.current.play().catch(error => console.error("Error playing tick sound:", error));
         }
         setTimeLeft((prevTime) => prevTime - 1); 
@@ -213,13 +216,13 @@ export default function CrorepatiChallengePage() {
     } else if (timerActive && timeLeft === 0) { // Timer ran out
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.currentTime = 0; // Reset on timeout
+        timerTickAudioRef.current.currentTime = 0; 
       }
       handleAnswerSelect(null); 
     } else if (!timerActive) { // Timer stopped for other reasons (answer selected, etc.)
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.pause(); 
-        timerTickAudioRef.current.currentTime = 0; // Reset when timer stops
+        timerTickAudioRef.current.currentTime = 0; 
       }
     }
   
@@ -227,7 +230,7 @@ export default function CrorepatiChallengePage() {
       clearInterval(intervalId);
       if (timerTickAudioRef.current) {
           timerTickAudioRef.current.pause();
-          timerTickAudioRef.current.currentTime = 0; // Reset on unmount/cleanup
+          timerTickAudioRef.current.currentTime = 0; 
       }
     };
   }, [timerActive, timeLeft, isAudioInitialized, handleAnswerSelect]);
