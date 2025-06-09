@@ -54,7 +54,6 @@ export default function CrorepatiChallengePage() {
   const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
-  // Refs to track previous state for smarter useEffect logic
   const prevGamePhaseRef = useRef<GamePhase>(gamePhase);
   const prevCurrentQuestionIndexRef = useRef<number>(currentQuestionIndex);
   const prevActiveTeamIndexRef = useRef<number>(activeTeamIndex);
@@ -151,6 +150,10 @@ export default function CrorepatiChallengePage() {
 
         if (isNewTurnInitialization) {
             setTimeLeft(currentQuestion.timeLimit);
+            if (isAudioInitialized && timerTickAudioRef.current) {
+                timerTickAudioRef.current.pause(); 
+                timerTickAudioRef.current.currentTime = 0;
+            }
         }
       
         setSelectedAnswer(null);
@@ -159,7 +162,7 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyOptions(null);
         setShowPhoneAFriend(false);
 
-        if (!timerActive) { 
+        if (!timerActive && (isNewTurnInitialization || timeLeft > 0)) { 
             setTimerActive(true); 
         }
         
@@ -179,12 +182,11 @@ export default function CrorepatiChallengePage() {
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
     teams.length, answerRevealed, isLifelineDialogActive, timerActive, 
-    currentQuestion?.timeLimit
+    currentQuestion?.timeLimit, isAudioInitialized, timeLeft
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    // Allow processing if timer runs out (optionIndex is null)
     if (answerRevealed || (!timerActive && optionIndex !== null)) {
       return;
     }
@@ -225,11 +227,9 @@ export default function CrorepatiChallengePage() {
         }
       }
     }
-    // Resetting answerRevealed here will trigger the question setup useEffect
-    // (or rather, allow it to proceed fully for the new turn/question)
     setAnswerRevealed(false); 
 
-  }, [answerRevealed, gamePhase, activeTeamIndex, teams, currentQuestionIndex, questions.length, isAudioInitialized]);
+  }, [answerRevealed, gamePhase, activeTeamIndex, teams.length, currentQuestionIndex, questions.length, isAudioInitialized]);
 
 
   // Main game timer effect
