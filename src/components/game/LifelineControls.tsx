@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Phone, MessageCircleQuestion, XCircle } from 'lucide-react'; // Updated Icons
+import { Phone, MessageCircleQuestion, Users, XCircle } from 'lucide-react'; // Added Users, kept MessageCircleQuestion
 import type { Team } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface LifelineControlsProps {
   activeTeam: Team | null;
-  onUseLifeline: (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll') => void;
+  onUseLifeline: (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => void; // Updated type
   disabled?: boolean; // General disable for all lifelines (e.g. answer revealed)
 }
 
@@ -19,7 +20,7 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
 
 
   const renderLifelineButton = (
-    type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll',
+    type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam', // Updated type
     icon: React.ReactNode,
     label: string | React.ReactNode
   ) => {
@@ -57,9 +58,9 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
           "" // Label is part of the icon for 50:50
         )}
         {renderLifelineButton(
-          'audiencePoll',
-          <MessageCircleQuestion className="w-7 h-7 md:w-8 md:h-8" />,
-          "Audience"
+          'askYourTeam', // Renamed from audiencePoll
+          <Users className="w-7 h-7 md:w-8 md:h-8" />, // Changed icon to Users
+          "Ask Team" // Renamed label
         )}
         {renderLifelineButton(
           'phoneAFriend',

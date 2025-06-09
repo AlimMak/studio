@@ -1,15 +1,16 @@
+
 import React from 'react';
-import type { AudiencePollData } from '@/lib/types';
-import { BarChart3 } from 'lucide-react';
+import type { TeamPollData } from '@/lib/types'; // Updated type
+import { BarChart3, Users } from 'lucide-react'; // Added Users
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface AudiencePollResultsProps {
-  pollData: AudiencePollData[];
+interface TeamPollResultsProps { // Renamed component and prop type
+  pollData: TeamPollData[];
   options: string[];
 }
 const optionLetters = ['A', 'B', 'C', 'D'];
 
-const AudiencePollResults: React.FC<AudiencePollResultsProps> = ({ pollData, options }) => {
+const TeamPollResults: React.FC<TeamPollResultsProps> = ({ pollData, options }) => { // Renamed component
   if (!pollData || pollData.length === 0) {
     return <p>No poll data available.</p>;
   }
@@ -18,7 +19,7 @@ const AudiencePollResults: React.FC<AudiencePollResultsProps> = ({ pollData, opt
     <Card className="w-full max-w-md mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl font-headline text-primary flex items-center justify-center gap-2">
-          <BarChart3 className="w-7 h-7" /> Audience Poll Results
+          <Users className="w-7 h-7" /> Ask Your Team Results 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -43,4 +44,4 @@ const AudiencePollResults: React.FC<AudiencePollResultsProps> = ({ pollData, opt
   );
 };
 
-export default AudiencePollResults;
+export default TeamPollResults; // Renamed export

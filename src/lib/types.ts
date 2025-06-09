@@ -1,3 +1,4 @@
+
 export interface Question {
   id: string;
   text: string;
@@ -15,13 +16,13 @@ export interface Team {
   lifelines: {
     fiftyFifty: boolean;
     phoneAFriend: boolean;
-    audiencePoll: boolean;
+    askYourTeam: boolean; // Renamed from audiencePoll
   };
 }
 
 export type GamePhase = 'SETUP' | 'PLAYING' | 'GAME_OVER';
 
-export interface AudiencePollData {
+export interface TeamPollData { // Renamed from AudiencePollData
   optionIndex: number;
   percentage: number;
 }
