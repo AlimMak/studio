@@ -119,7 +119,7 @@ export default function CrorepatiChallengePage() {
         audio.removeEventListener('canplaythrough', onCanPlayThrough);
         audio.removeEventListener('error', onError);
         audio.pause();
-        audio.currentTime = 0; // Reset on unmount
+        audio.currentTime = 0; 
       }
       timerTickAudioRef.current = null; 
       setIsAudioInitialized(false); 
@@ -205,7 +205,7 @@ export default function CrorepatiChallengePage() {
     if (timerActive && timeLeft > 0) {
       intervalId = setInterval(() => {
         if (isAudioInitialized && timerTickAudioRef.current) {
-          timerTickAudioRef.current.currentTime = 0; 
+          // Do NOT reset currentTime here for continuous play / repeated short sound
           timerTickAudioRef.current.play().catch(error => console.error("Error playing tick sound:", error));
         }
         setTimeLeft((prevTime) => prevTime - 1); 
@@ -213,13 +213,13 @@ export default function CrorepatiChallengePage() {
     } else if (timerActive && timeLeft === 0) { // Timer ran out
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.currentTime = 0; 
+        timerTickAudioRef.current.currentTime = 0; // Reset on timeout
       }
       handleAnswerSelect(null); 
-    } else if (!timerActive) { // Timer stopped for other reasons
+    } else if (!timerActive) { // Timer stopped for other reasons (answer selected, etc.)
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.pause(); 
-        timerTickAudioRef.current.currentTime = 0;
+        timerTickAudioRef.current.currentTime = 0; // Reset when timer stops
       }
     }
   
@@ -227,7 +227,7 @@ export default function CrorepatiChallengePage() {
       clearInterval(intervalId);
       if (timerTickAudioRef.current) {
           timerTickAudioRef.current.pause();
-          timerTickAudioRef.current.currentTime = 0;
+          timerTickAudioRef.current.currentTime = 0; // Reset on unmount/cleanup
       }
     };
   }, [timerActive, timeLeft, isAudioInitialized, handleAnswerSelect]);
@@ -415,5 +415,4 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-
     
