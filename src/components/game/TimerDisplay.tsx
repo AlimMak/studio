@@ -8,9 +8,9 @@ interface TimerDisplayProps {
 
 const TimerDisplay: React.FC<TimerDisplayProps> = ({ timeLeft, maxTime }) => {
   const progressPercentage = maxTime > 0 ? (timeLeft / maxTime) * 100 : 0;
-  let progressColorClass = 'bg-green-500';
-  if (progressPercentage < 50) progressColorClass = 'bg-yellow-500';
-  if (progressPercentage < 25) progressColorClass = 'bg-red-500';
+  let progressColorClass = 'bg-[hsl(var(--success))]';
+  if (progressPercentage < 50) progressColorClass = 'bg-[hsl(var(--warning))]';
+  if (progressPercentage < 25) progressColorClass = 'bg-destructive';
 
   return (
     <div className="flex flex-col items-center my-4 p-3 rounded-lg shadow-inner bg-background/50">

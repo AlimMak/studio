@@ -25,8 +25,8 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
 }) => {
   const getButtonClass = () => {
     if (reveal) {
-      if (isCorrect) return 'bg-green-500 hover:bg-green-600 text-white animate-pulse-correct';
-      if (isSelected && !isCorrect) return 'bg-destructive hover:bg-destructive/90 text-white animate-pulse-incorrect';
+      if (isCorrect) return 'bg-[hsl(var(--success))] hover:bg-[hsl(var(--success))] opacity-100 text-[hsl(var(--success-foreground))] animate-pulse-correct';
+      if (isSelected && !isCorrect) return 'bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-pulse-incorrect';
       return 'bg-muted hover:bg-muted/80 text-muted-foreground';
     }
     if (isSelected) return 'bg-primary/80 hover:bg-primary/70 text-primary-foreground ring-2 ring-accent';
