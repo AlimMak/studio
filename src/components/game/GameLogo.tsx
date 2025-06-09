@@ -1,20 +1,24 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import Image from 'next/image';
 
-const GameLogo: React.FC<{ className?: string; size?: 'small' | 'large' }> = ({ className, size = 'large' }) => {
-  const titleSize = size === 'large' ? 'text-4xl md:text-5xl' : 'text-3xl md:text-4xl';
-  const subTextSize = size === 'large' ? 'text-sm' : 'text-xs';
+interface GameLogoProps {
+  className?: string;
+  size?: 'small' | 'large';
+}
+
+const GameLogo: React.FC<GameLogoProps> = ({ className, size = 'large' }) => {
+  const imageSize = size === 'large' ? { width: 250, height: 250 } : { width: 150, height: 150 };
 
   return (
-    <div className={`flex flex-col items-center justify-center text-center ${className}`}>
-      <h1 className={`${titleSize} font-bold font-headline`}>
-        <span className="text-primary">Team</span>
-        <span className="text-accent"> Crorepati</span>
-      </h1>
-      <p className={`${subTextSize} text-muted-foreground flex items-center mt-1`}>
-        <Sparkles className="w-4 h-4 mr-1 text-accent" />
-        The Ultimate Trivia Challenge
-      </p>
+    <div className={`flex flex-col items-center justify-center ${className}`}>
+      <Image
+        src="/kbc-official-logo.png"
+        alt="Kaun Banega Crorepati Logo"
+        width={imageSize.width}
+        height={imageSize.height}
+        priority // Preload the logo as it's important
+        data-ai-hint="game show logo"
+      />
     </div>
   );
 };
