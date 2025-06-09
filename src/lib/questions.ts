@@ -1,3 +1,4 @@
+
 import type { Question } from './types';
 
 export const sampleQuestions: Question[] = [
@@ -7,7 +8,7 @@ export const sampleQuestions: Question[] = [
     options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
     correctAnswerIndex: 2,
     moneyValue: 100,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q2',
@@ -15,7 +16,7 @@ export const sampleQuestions: Question[] = [
     options: ['Earth', 'Mars', 'Jupiter', 'Saturn'],
     correctAnswerIndex: 1,
     moneyValue: 200,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q3',
@@ -23,7 +24,7 @@ export const sampleQuestions: Question[] = [
     options: ['Charles Dickens', 'William Shakespeare', 'Leo Tolstoy', 'Mark Twain'],
     correctAnswerIndex: 1,
     moneyValue: 300,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q4',
@@ -31,7 +32,7 @@ export const sampleQuestions: Question[] = [
     options: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
     correctAnswerIndex: 3,
     moneyValue: 500,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q5',
@@ -39,7 +40,7 @@ export const sampleQuestions: Question[] = [
     options: ['1942', '1945', '1950', '1939'],
     correctAnswerIndex: 1,
     moneyValue: 1000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
    {
     id: 'q6',
@@ -47,7 +48,7 @@ export const sampleQuestions: Question[] = [
     options: ['O2', 'H2O', 'CO2', 'NaCl'],
     correctAnswerIndex: 1,
     moneyValue: 2000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q7',
@@ -55,7 +56,7 @@ export const sampleQuestions: Question[] = [
     options: ['Vincent van Gogh', 'Pablo Picasso', 'Leonardo da Vinci', 'Claude Monet'],
     correctAnswerIndex: 2,
     moneyValue: 5000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q8',
@@ -63,7 +64,7 @@ export const sampleQuestions: Question[] = [
     options: ['Gold', 'Iron', 'Diamond', 'Quartz'],
     correctAnswerIndex: 2,
     moneyValue: 10000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q9',
@@ -71,7 +72,7 @@ export const sampleQuestions: Question[] = [
     options: ['China', 'Japan', 'Thailand', 'South Korea'],
     correctAnswerIndex: 1,
     moneyValue: 25000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
   },
   {
     id: 'q10',
@@ -79,7 +80,247 @@ export const sampleQuestions: Question[] = [
     options: ['10', '12', '14', '16'],
     correctAnswerIndex: 1,
     moneyValue: 50000,
-    timeLimit: 30, // Updated
+    timeLimit: 30,
+  },
+  {
+    id: 'q11',
+    text: 'What is the currency of Japan?',
+    options: ['Yuan', 'Won', 'Yen', 'Dollar'],
+    correctAnswerIndex: 2,
+    moneyValue: 75000,
+    timeLimit: 30,
+  },
+  {
+    id: 'q12',
+    text: 'Who is the author of "Pride and Prejudice"?',
+    options: ['Jane Austen', 'Charlotte Brontë', 'Emily Brontë', 'George Eliot'],
+    correctAnswerIndex: 0,
+    moneyValue: 100000,
+    timeLimit: 30,
+  },
+  {
+    id: 'q13',
+    text: 'Which element has the chemical symbol "Fe"?',
+    options: ['Gold', 'Silver', 'Iron', 'Copper'],
+    correctAnswerIndex: 2,
+    moneyValue: 150000,
+    timeLimit: 30,
+  },
+  {
+    id: 'q14',
+    text: 'In which continent is the Sahara Desert located?',
+    options: ['Asia', 'Africa', 'South America', 'Australia'],
+    correctAnswerIndex: 1,
+    moneyValue: 200000,
+    timeLimit: 30,
+  },
+  {
+    id: 'q15',
+    text: 'What is the tallest mountain in the world?',
+    options: ['K2', 'Kangchenjunga', 'Lhotse', 'Mount Everest'],
+    correctAnswerIndex: 3,
+    moneyValue: 300000,
+    timeLimit: 30,
+  },
+  {
+    id: 'q16',
+    text: 'Who discovered penicillin?',
+    options: ['Marie Curie', 'Alexander Fleming', 'Louis Pasteur', 'Isaac Newton'],
+    correctAnswerIndex: 1,
+    moneyValue: 400000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q17',
+    text: 'What is the main ingredient in guacamole?',
+    options: ['Tomato', 'Avocado', 'Onion', 'Pepper'],
+    correctAnswerIndex: 1,
+    moneyValue: 500000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q18',
+    text: 'Which country gifted the Statue of Liberty to the USA?',
+    options: ['United Kingdom', 'Germany', 'France', 'Spain'],
+    correctAnswerIndex: 2,
+    moneyValue: 750000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q19',
+    text: 'What is the boiling point of water in Celsius at sea level?',
+    options: ['90°C', '100°C', '110°C', '120°C'],
+    correctAnswerIndex: 1,
+    moneyValue: 1000000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q20',
+    text: 'How many players are there in a standard soccer team on the field?',
+    options: ['9', '10', '11', '12'],
+    correctAnswerIndex: 2,
+    moneyValue: 1250000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q21',
+    text: 'Which is the largest bird in the world?',
+    options: ['Eagle', 'Ostrich', 'Emu', 'Penguin'],
+    correctAnswerIndex: 1,
+    moneyValue: 1500000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q22',
+    text: 'What is the name of the galaxy that contains our Solar System?',
+    options: ['Andromeda', 'Triangulum', 'Whirlpool', 'Milky Way'],
+    correctAnswerIndex: 3,
+    moneyValue: 2000000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q23',
+    text: 'Who was the first person to step on the Moon?',
+    options: ['Buzz Aldrin', 'Michael Collins', 'Yuri Gagarin', 'Neil Armstrong'],
+    correctAnswerIndex: 3,
+    moneyValue: 2500000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q24',
+    text: 'What gas do plants absorb from the atmosphere for photosynthesis?',
+    options: ['Oxygen', 'Nitrogen', 'Carbon Dioxide', 'Hydrogen'],
+    correctAnswerIndex: 2,
+    moneyValue: 3000000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q25',
+    text: 'Which ocean is the smallest by surface area?',
+    options: ['Arctic Ocean', 'Indian Ocean', 'Southern Ocean', 'Atlantic Ocean'],
+    correctAnswerIndex: 0,
+    moneyValue: 4000000,
+    timeLimit: 25,
+  },
+  {
+    id: 'q26',
+    text: 'What is the capital city of Australia?',
+    options: ['Sydney', 'Melbourne', 'Canberra', 'Brisbane'],
+    correctAnswerIndex: 2,
+    moneyValue: 5000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q27',
+    text: 'Who invented the telephone?',
+    options: ['Thomas Edison', 'Nikola Tesla', 'Alexander Graham Bell', 'Guglielmo Marconi'],
+    correctAnswerIndex: 2,
+    moneyValue: 6000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q28',
+    text: 'In Greek mythology, who is the god of the sea?',
+    options: ['Zeus', 'Hades', 'Poseidon', 'Apollo'],
+    correctAnswerIndex: 2,
+    moneyValue: 7000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q29',
+    text: 'Which composer wrote "The Four Seasons"?',
+    options: ['Johann Sebastian Bach', 'Wolfgang Amadeus Mozart', 'Ludwig van Beethoven', 'Antonio Vivaldi'],
+    correctAnswerIndex: 3,
+    moneyValue: 8000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q30',
+    text: 'What is the speed of light in a vacuum (approximately)?',
+    options: ['300,000 km/s', '150,000 km/s', '500,000 km/s', '1,000,000 km/s'],
+    correctAnswerIndex: 0,
+    moneyValue: 9000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q31',
+    text: 'Which artist is known for co-founding the Cubist movement?',
+    options: ['Claude Monet', 'Vincent van Gogh', 'Salvador Dalí', 'Pablo Picasso'],
+    correctAnswerIndex: 3,
+    moneyValue: 10000000, // 1 Crore
+    timeLimit: 20,
+  },
+  {
+    id: 'q32',
+    text: 'What is the primary language spoken in Brazil?',
+    options: ['Spanish', 'Portuguese', 'French', 'English'],
+    correctAnswerIndex: 1,
+    moneyValue: 12000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q33',
+    text: 'How many continents are there on Earth (commonly accepted model)?',
+    options: ['5', '6', '7', '8'],
+    correctAnswerIndex: 2,
+    moneyValue: 15000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q34',
+    text: 'Which famous scientist developed the theory of general relativity?',
+    options: ['Isaac Newton', 'Galileo Galilei', 'Albert Einstein', 'Stephen Hawking'],
+    correctAnswerIndex: 2,
+    moneyValue: 18000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q35',
+    text: 'What is the largest desert in Asia?',
+    options: ['Thar Desert', 'Gobi Desert', 'Arabian Desert', 'Karakum Desert'],
+    correctAnswerIndex: 1,
+    moneyValue: 20000000,
+    timeLimit: 20,
+  },
+  {
+    id: 'q36',
+    text: 'In which year was the first iPhone released?',
+    options: ['2005', '2006', '2007', '2008'],
+    correctAnswerIndex: 2,
+    moneyValue: 25000000,
+    timeLimit: 15,
+  },
+  {
+    id: 'q37',
+    text: 'What does "HTTP" stand for in web addresses?',
+    options: ['HyperText Transfer Protocol', 'HyperText Transmission Protocol', 'HighText Transfer Protocol', 'HyperText Translation Protocol'],
+    correctAnswerIndex: 0,
+    moneyValue: 30000000,
+    timeLimit: 15,
+  },
+  {
+    id: 'q38',
+    text: 'Who painted "Starry Night"?',
+    options: ['Claude Monet', 'Pablo Picasso', 'Vincent van Gogh', 'Edvard Munch'],
+    correctAnswerIndex: 2,
+    moneyValue: 40000000,
+    timeLimit: 15,
+  },
+  {
+    id: 'q39',
+    text: 'What is the chemical symbol for gold?',
+    options: ['Ag', 'Au', 'Pb', 'Pt'],
+    correctAnswerIndex: 1,
+    moneyValue: 50000000,
+    timeLimit: 15,
+  },
+  {
+    id: 'q40',
+    text: 'Which country has the most UNESCO World Heritage Sites as of early 2024?',
+    options: ['China', 'Italy', 'Spain', 'Germany'],
+    correctAnswerIndex: 1,
+    moneyValue: 70000000, // 7 Crore
+    timeLimit: 15,
   },
 ];
 
@@ -90,3 +331,4 @@ export const getQuestions = (): Question[] => {
   // Sort by moneyValue to ensure progression
   return [...sampleQuestions].sort((a, b) => a.moneyValue - b.moneyValue);
 };
+
