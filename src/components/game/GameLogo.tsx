@@ -12,33 +12,34 @@ interface GameLogoProps {
 const GameLogo: React.FC<GameLogoProps> = ({
   className,
   size = 'large',
-  leftImageSrc = '/amit.png',
+  leftImageSrc = '/don.png', // Changed from /amit.png
 }) => {
   const mainImageSize = size === 'large' ? { width: 250, height: 250 } : { width: 150, height: 150 };
 
-  // Define intrinsic dimensions of your amit.png for next/image's aspect ratio & blur placeholder with fill
+  // Define intrinsic dimensions of your don.png for next/image's aspect ratio & blur placeholder with fill
   // These are not directly passed as width/height to the Image with fill, but can be useful for reference or other contexts.
-  const amitIntrinsicWidth = 300;  // Replace with actual width of amit.png
-  const amitIntrinsicHeight = 800; // Replace with actual height of amit.png
+  // Please update these if you know the actual dimensions of don.png for better optimization
+  const donIntrinsicWidth = 300;  // Replace with actual width of don.png
+  const donIntrinsicHeight = 800; // Replace with actual height of don.png
 
   return (
     // This root div takes the className and centers the KBC logo.
-    // amit.png is now fixed and out of this div's direct layout flow.
+    // don.png is now fixed and out of this div's direct layout flow.
     <div className={cn('relative flex items-center justify-center', className)}>
 
-      {/* Container for the fixed amit.png image */}
+      {/* Container for the fixed don.png image */}
       <div
         className="fixed left-0 top-[100px] bottom-0 z-0 print:hidden" // Positioned left, 100px from top, full height, behind other content
-        style={{ width: '150px' }} // Adjust this width as needed for amit.png
+        style={{ width: '150px' }} // Adjust this width as needed for don.png
       >
         <Image
           src={leftImageSrc}
-          alt="Host Amitabh Bachchan"
+          alt="Host figure" // Updated alt text
           fill // Makes the image fill its parent div
           style={{ objectFit: 'contain' }} // 'contain' respects aspect ratio. Use 'cover' to fill and crop.
           data-ai-hint="host portrait"
           sizes="150px" // Informs browser about the rendered width of the image
-          priority // Consider adding priority if this image is LCP
+          priority 
         />
       </div>
 
