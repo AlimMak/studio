@@ -88,10 +88,20 @@ export default {
             height: '0',
           },
         },
+        pulseCorrect: {
+          '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 hsl(var(--accent) / 0.7)' },
+          '50%': { transform: 'scale(1.05)', boxShadow: '0 0 0 10px hsl(var(--accent) / 0)' },
+        },
+        pulseIncorrect: {
+          '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 hsl(var(--destructive) / 0.7)' },
+          '50%': { transform: 'scale(1.05)', boxShadow: '0 0 0 10px hsl(var(--destructive) / 0)' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse-correct': 'pulseCorrect 1.5s ease-out',
+        'pulse-incorrect': 'pulseIncorrect 1.5s ease-out',
       },
     },
   },
