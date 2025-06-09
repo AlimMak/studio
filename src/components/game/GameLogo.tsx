@@ -30,7 +30,7 @@ const GameLogo: React.FC<GameLogoProps> = ({
       {/* Container for the fixed don.png image */}
       <div
         className="fixed left-0 top-[100px] bottom-0 z-0 print:hidden" // Positioned left, 100px from top, full height, behind other content
-        style={{ width: '250px' }} // Increased width from 150px to 250px
+        style={{ width: '500px' }} // Increased width from 250px to 500px
       >
         <Image
           src={leftImageSrc}
@@ -38,7 +38,7 @@ const GameLogo: React.FC<GameLogoProps> = ({
           fill // Makes the image fill its parent div
           style={{ objectFit: 'contain' }} // 'contain' respects aspect ratio. Use 'cover' to fill and crop.
           data-ai-hint="host portrait"
-          sizes="250px" // Updated sizes prop to match new width
+          sizes="500px" // Updated sizes prop to match new width
           priority 
         />
       </div>
