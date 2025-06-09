@@ -7,7 +7,7 @@ export const sampleQuestions: Question[] = [
     options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
     correctAnswerIndex: 2,
     moneyValue: 100,
-    timeLimit: 60,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q2',
@@ -15,7 +15,7 @@ export const sampleQuestions: Question[] = [
     options: ['Earth', 'Mars', 'Jupiter', 'Saturn'],
     correctAnswerIndex: 1,
     moneyValue: 200,
-    timeLimit: 55,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q3',
@@ -23,7 +23,7 @@ export const sampleQuestions: Question[] = [
     options: ['Charles Dickens', 'William Shakespeare', 'Leo Tolstoy', 'Mark Twain'],
     correctAnswerIndex: 1,
     moneyValue: 300,
-    timeLimit: 50,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q4',
@@ -31,7 +31,7 @@ export const sampleQuestions: Question[] = [
     options: ['Atlantic Ocean', 'Indian Ocean', 'Arctic Ocean', 'Pacific Ocean'],
     correctAnswerIndex: 3,
     moneyValue: 500,
-    timeLimit: 45,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q5',
@@ -39,7 +39,7 @@ export const sampleQuestions: Question[] = [
     options: ['1942', '1945', '1950', '1939'],
     correctAnswerIndex: 1,
     moneyValue: 1000,
-    timeLimit: 40,
+    timeLimit: 30, // Updated
   },
    {
     id: 'q6',
@@ -47,7 +47,7 @@ export const sampleQuestions: Question[] = [
     options: ['O2', 'H2O', 'CO2', 'NaCl'],
     correctAnswerIndex: 1,
     moneyValue: 2000,
-    timeLimit: 35,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q7',
@@ -55,7 +55,7 @@ export const sampleQuestions: Question[] = [
     options: ['Vincent van Gogh', 'Pablo Picasso', 'Leonardo da Vinci', 'Claude Monet'],
     correctAnswerIndex: 2,
     moneyValue: 5000,
-    timeLimit: 30,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q8',
@@ -63,7 +63,7 @@ export const sampleQuestions: Question[] = [
     options: ['Gold', 'Iron', 'Diamond', 'Quartz'],
     correctAnswerIndex: 2,
     moneyValue: 10000,
-    timeLimit: 25,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q9',
@@ -71,7 +71,7 @@ export const sampleQuestions: Question[] = [
     options: ['China', 'Japan', 'Thailand', 'South Korea'],
     correctAnswerIndex: 1,
     moneyValue: 25000,
-    timeLimit: 20,
+    timeLimit: 30, // Updated
   },
   {
     id: 'q10',
@@ -79,7 +79,7 @@ export const sampleQuestions: Question[] = [
     options: ['10', '12', '14', '16'],
     correctAnswerIndex: 1,
     moneyValue: 50000,
-    timeLimit: 15,
+    timeLimit: 30, // Updated
   },
 ];
 
