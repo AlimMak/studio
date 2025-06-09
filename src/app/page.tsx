@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Team, Question, GamePhase, AudiencePollData } from '@/lib/types';
 import { getQuestions } from '@/lib/questions';
 import { generateQuestionVariation } from '@/ai/flows/question-variation';
@@ -11,7 +12,7 @@ import QuestionDisplay from '@/components/game/QuestionDisplay';
 import TimerDisplay from '@/components/game/TimerDisplay';
 import LifelineControls from '@/components/game/LifelineControls';
 import AudiencePollResults from '@/components/game/AudiencePollResults';
-import GameLogo from '@/components/game/GameLogo'; // Added
+import GameLogo from '@/components/game/GameLogo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +45,77 @@ export default function CrorepatiChallengePage() {
   const currentQuestion = questions[currentQuestionIndex];
   const activeTeam = teams[activeTeamIndex];
 
+  const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false);
+
+  const handleStartGame = useCallback((teamNames: string[]) => {
+    const newTeams: Team[] = teamNames.map((name, index) => ({
+      id: `team-${index + 1}-${Date.now()}`,
+      name: name.trim(),
+      score: 0,
+      lifelines: { fiftyFifty: true, phoneAFriend: true, audiencePoll: true },
+    }));
+    setTeams(newTeams);
+    setCurrentQuestionIndex(0);
+    setActiveTeamIndex(0);
+    setGamePhase('PLAYING');
+    // Reset game-specific states for a fresh game
+    setAnswerRevealed(false);
+    setSelectedAnswer(null);
+    setFiftyFiftyUsed(false);
+    setFiftyFiftyOptions(null);
+    setShowAudiencePoll(false);
+    setAudiencePollData(null);
+    setShowPhoneAFriend(false);
+    // Timer will be reset by the useEffect watching currentQuestion and gamePhase
+  }, [
+    setTeams, 
+    setCurrentQuestionIndex, 
+    setActiveTeamIndex, 
+    setGamePhase,
+    setAnswerRevealed,
+    setSelectedAnswer,
+    setFiftyFiftyUsed,
+    setFiftyFiftyOptions,
+    setShowAudiencePoll,
+    setAudiencePollData,
+    setShowPhoneAFriend
+  ]);
+
+  useEffect(() => {
+    const audio = new Audio('/sounds/timer-tick.mp3');
+    audio.preload = 'auto';
+  
+    const onCanPlayThrough = () => {
+      if (audio) {
+        timerTickAudioRef.current = audio;
+        setIsAudioInitialized(true);
+      }
+    };
+    
+    const onError = (e: Event) => {
+      console.error("Audio loading error:", e);
+      if (e.target && 'error' in e.target && (e.target as HTMLAudioElement).error) {
+        console.error("Audio element error property:", (e.target as HTMLAudioElement).error);
+      }
+    };
+  
+    audio.addEventListener('canplaythrough', onCanPlayThrough);
+    audio.addEventListener('error', onError);
+    
+    audio.load(); 
+  
+    return () => {
+      if (audio) {
+        audio.removeEventListener('canplaythrough', onCanPlayThrough);
+        audio.removeEventListener('error', onError);
+        audio.pause(); 
+      }
+      timerTickAudioRef.current = null; 
+      setIsAudioInitialized(false); 
+    };
+  }, []);
+
   const loadQuestions = useCallback(async () => {
     const baseQuestions = getQuestions();
     const variedQuestions = await Promise.all(
@@ -54,7 +126,7 @@ export default function CrorepatiChallengePage() {
             return { ...q, text: variation.variedQuestion, originalText: q.text };
           } catch (error) {
             console.error("Failed to vary question:", error);
-            return q; // Fallback to original if AI fails
+            return q; 
           }
         }
         return q;
@@ -74,43 +146,14 @@ export default function CrorepatiChallengePage() {
       setTimeLeft(currentQuestion.timeLimit);
       setTimerActive(true);
       setSelectedAnswer(null);
-      setFiftyFiftyUsed(false);
-      setFiftyFiftyOptions(null);
+      // fiftyFiftyUsed and fiftyFiftyOptions are reset per question in handleAnswerSelect's timeout
     }
-  }, [gamePhase, currentQuestion, timerActive, answerRevealed]);
+  }, [gamePhase, currentQuestion, timerActive, answerRevealed]); // Removed currentQuestion.timeLimit as currentQuestion covers it
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (timerActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-    } else if (timerActive && timeLeft === 0) {
-      setTimerActive(false);
-      handleAnswerSelect(null); // Time's up, treat as incorrect or no answer
-    }
-    return () => clearInterval(interval);
-  }, [timerActive, timeLeft]);
-
-
-  const handleStartGame = (teamNames: string[]) => {
-    const newTeams: Team[] = teamNames.slice(0, MAX_TEAMS).map((name, index) => ({
-      id: `team-${index + 1}`,
-      name,
-      score: 0,
-      lifelines: { fiftyFifty: true, phoneAFriend: true, audiencePoll: true },
-    }));
-    setTeams(newTeams);
-    setGamePhase('PLAYING');
-    setCurrentQuestionIndex(0);
-    setActiveTeamIndex(0);
-    setAnswerRevealed(false);
-  };
-
-  const handleAnswerSelect = (optionIndex: number | null) => {
+  const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || !timerActive) return;
 
-    setTimerActive(false);
+    setTimerActive(false); 
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
 
@@ -129,23 +172,56 @@ export default function CrorepatiChallengePage() {
       setTimeout(() => {
         setAnswerRevealed(false);
         setSelectedAnswer(null);
-        setFiftyFiftyUsed(false);
-        setFiftyFiftyOptions(null);
+        setFiftyFiftyUsed(false); // Reset 50:50 for the next question/turn
+        setFiftyFiftyOptions(null); // Reset 50:50 options
 
         const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
         setActiveTeamIndex(nextTeamIndex);
 
-        if (nextTeamIndex === 0) {
+        if (nextTeamIndex === 0) { 
           if (currentQuestionIndex + 1 < questions.length) {
             setCurrentQuestionIndex(prev => prev + 1);
           } else {
             setGamePhase('GAME_OVER');
           }
         }
-        setTimerActive(false); 
+        // Timer will be set to active by the other useEffect listening to currentQuestion changes
       }, 2000); 
     }, 1500);
-  };
+  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, activeTeamIndex, teams, currentQuestionIndex, questions, gamePhase, setGamePhase, setTeams, setActiveTeamIndex, setCurrentQuestionIndex]);
+  
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | undefined;
+  
+    if (timerActive && timeLeft > 0) {
+      intervalId = setInterval(() => {
+        if (isAudioInitialized && timerTickAudioRef.current) {
+          timerTickAudioRef.current.currentTime = 0; 
+          timerTickAudioRef.current.play().catch(error => console.error("Error playing tick sound:", error));
+        }
+        setTimeLeft((prevTime) => prevTime - 1); 
+      }, 1000);
+    } else if (timerActive && timeLeft === 0) {
+      if (isAudioInitialized && timerTickAudioRef.current) {
+        timerTickAudioRef.current.pause(); 
+      }
+      handleAnswerSelect(null); 
+    } else if (!timerActive) {
+      if (isAudioInitialized && timerTickAudioRef.current) {
+        timerTickAudioRef.current.pause(); 
+      }
+    }
+  
+    return () => {
+      clearInterval(intervalId);
+      // Ensure sound is paused when effect cleans up or timerActive/timeLeft changes cause re-run
+      if (timerTickAudioRef.current && !timerActive) {
+          timerTickAudioRef.current.pause();
+      }
+    };
+  }, [timerActive, timeLeft, isAudioInitialized, handleAnswerSelect]);
+
 
   const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll') => {
     if (!activeTeam || disabledLifeline(type)) return;
@@ -166,12 +242,11 @@ export default function CrorepatiChallengePage() {
         .filter(i => i !== correctAnswer);
       
       const optionsToHide: number[] = [];
-      while(optionsToHide.length < 2 && incorrectOptions.length > optionsToHide.length) {
-          const randomIncorrectIdx = Math.floor(Math.random() * incorrectOptions.length);
-          const optionToHide = incorrectOptions[randomIncorrectIdx];
-          if (!optionsToHide.includes(optionToHide)) {
-              optionsToHide.push(optionToHide);
-          }
+      const numToHide = Math.min(2, incorrectOptions.length); 
+      while(optionsToHide.length < numToHide && incorrectOptions.length > 0) { // Added incorrectOptions.length > 0 check
+          const randomIndex = Math.floor(Math.random() * incorrectOptions.length);
+          const optionToHide = incorrectOptions.splice(randomIndex, 1)[0]; 
+          optionsToHide.push(optionToHide);
       }
       setFiftyFiftyOptions(optionsToHide);
       toast({ title: "50:50 Used!", description: "Two incorrect options removed." });
@@ -184,25 +259,34 @@ export default function CrorepatiChallengePage() {
         percentage: 0,
       }));
       let remainingPercentage = 100;
-      pollResults[currentQuestion.correctAnswerIndex].percentage = Math.floor(Math.random() * 40) + 30; 
-      remainingPercentage -= pollResults[currentQuestion.correctAnswerIndex].percentage;
-
-      const otherOptionIndices = currentQuestion.options.map((_,i) => i).filter(i => i !== currentQuestion.correctAnswerIndex);
-      otherOptionIndices.forEach((optIndex, arrIdx) => {
-          if (arrIdx === otherOptionIndices.length -1) {
-              pollResults[optIndex].percentage = remainingPercentage;
-          } else {
-              const randomShare = Math.floor(Math.random() * (remainingPercentage / (otherOptionIndices.length - arrIdx)));
-              pollResults[optIndex].percentage = randomShare;
-              remainingPercentage -= randomShare;
-          }
-      });
       
-      if (remainingPercentage > 0 && pollResults.length > 0) {
-          // find first non-correct answer and add remaining percentage
-          const firstNonCorrect = pollResults.find(pr => pr.optionIndex !== currentQuestion.correctAnswerIndex);
-          if(firstNonCorrect) firstNonCorrect.percentage += remainingPercentage;
-          else pollResults[0].percentage += remainingPercentage; // fallback
+      if (currentQuestion.options.length > 0) { // Ensure options exist
+        pollResults[currentQuestion.correctAnswerIndex].percentage = Math.floor(Math.random() * 41) + 30; 
+        remainingPercentage -= pollResults[currentQuestion.correctAnswerIndex].percentage;
+
+        const otherOptionIndices = currentQuestion.options.map((_,i) => i).filter(i => i !== currentQuestion.correctAnswerIndex);
+        otherOptionIndices.forEach((optIndex, arrIdx) => {
+            if (arrIdx === otherOptionIndices.length -1) { 
+                pollResults[optIndex].percentage = remainingPercentage;
+            } else {
+                const randomShare = Math.floor(Math.random() * (remainingPercentage / (otherOptionIndices.length - arrIdx || 1))); // Avoid division by zero
+                pollResults[optIndex].percentage = randomShare;
+                remainingPercentage -= randomShare;
+            }
+        });
+        
+        let currentSum = pollResults.reduce((sum, item) => sum + item.percentage, 0);
+        if (currentSum !== 100 && pollResults.length > 0) {
+            const diff = 100 - currentSum;
+            const targetIdx = pollResults.findIndex(p => p.optionIndex !== currentQuestion.correctAnswerIndex && p.percentage + diff >= 0); // Ensure percentage doesn't go negative
+            if (targetIdx !== -1) {
+              pollResults[targetIdx].percentage += diff;
+            } else { 
+              const fallbackIdx = pollResults.findIndex(p => p.percentage + diff >=0);
+              if (fallbackIdx !== -1) pollResults[fallbackIdx].percentage += diff;
+              else if (pollResults.length > 0) pollResults[0].percentage += diff; // Last resort, might make one option very dominant
+            }
+        }
       }
 
       setAudiencePollData(pollResults.sort((a,b) => b.percentage - a.percentage));
@@ -215,13 +299,6 @@ export default function CrorepatiChallengePage() {
       if(!activeTeam) return true;
       return !activeTeam.lifelines[type] || answerRevealed || !timerActive || (type === 'fiftyFifty' && fiftyFiftyUsed);
   }
-
-  const getDisplayedOptionsIndices = () => {
-    if (fiftyFiftyUsed && fiftyFiftyOptions) {
-      return currentQuestion.options.map((_, i) => i).filter(i => !fiftyFiftyOptions.includes(i));
-    }
-    return currentQuestion.options.map((_, i) => i);
-  };
 
   if (gamePhase === 'SETUP') {
     return (
@@ -249,6 +326,9 @@ export default function CrorepatiChallengePage() {
         <Button onClick={() => {
           setGamePhase('SETUP'); 
           setTeams([]); 
+          setCurrentQuestionIndex(0);
+          setActiveTeamIndex(0);
+          // Other states are reset by handleStartGame or useEffects
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
@@ -265,8 +345,6 @@ export default function CrorepatiChallengePage() {
     );
   }
   
-  const displayedOptionIndices = getDisplayedOptionsIndices();
-
   return (
     <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow">
       <header className="w-full mb-6">
@@ -275,19 +353,19 @@ export default function CrorepatiChallengePage() {
       <div className="w-full flex flex-col md:flex-row gap-6 items-start">
         <div className="w-full md:w-1/3 lg:w-1/4 order-2 md:order-1">
           <Scoreboard teams={teams} activeTeamId={activeTeam.id} />
-          <LifelineControls activeTeam={activeTeam} onUseLifeline={handleUseLifeline} disabled={answerRevealed || !timerActive} />
+          <LifelineControls activeTeam={activeTeam} onUseLifeline={handleUseLifeline} disabled={answerRevealed || !timerActive || !currentQuestion} />
         </div>
 
         <div className="w-full md:w-2/3 lg:w-3/4 order-1 md:order-2 space-y-6">
-          <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} />
-          <QuestionDisplay
+          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
+          {currentQuestion && <QuestionDisplay
             question={currentQuestion}
             onAnswerSelect={handleAnswerSelect}
             selectedAnswer={selectedAnswer}
             revealAnswer={answerRevealed}
             disabledOptions={fiftyFiftyOptions || []} 
             isAnswerDisabled={answerRevealed || !timerActive}
-          />
+          />}
         </div>
       </div>
 
@@ -299,7 +377,7 @@ export default function CrorepatiChallengePage() {
               The audience has voted. Here are the results:
             </DialogDescription>
           </DialogHeader>
-          {audiencePollData && <AudiencePollResults pollData={audiencePollData} options={currentQuestion.options}/>}
+          {audiencePollData && currentQuestion && <AudiencePollResults pollData={audiencePollData} options={currentQuestion.options}/>}
           <DialogFooter>
             <Button onClick={() => setShowAudiencePoll(false)}>Close</Button>
           </DialogFooter>
@@ -314,7 +392,9 @@ export default function CrorepatiChallengePage() {
           <DialogDescription className="my-4 text-lg text-center">
             📞 Calling your friend... Ring ring... 📞
             <br/><br/>
-            Your friend thinks the answer might be <strong className="text-accent">{currentQuestion.options[currentQuestion.correctAnswerIndex]}</strong>.
+            {currentQuestion && currentQuestion.options[currentQuestion.correctAnswerIndex] ? 
+             `Your friend thinks the answer might be <strong className="text-accent">${currentQuestion.options[currentQuestion.correctAnswerIndex]}</strong>.`
+             : "Your friend is thinking..."}
             <br/> (But remember, they're not always right!)
           </DialogDescription>
           <DialogFooter>
@@ -325,3 +405,4 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
+
