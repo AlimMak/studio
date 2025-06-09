@@ -83,6 +83,7 @@ export default function CrorepatiChallengePage() {
   useEffect(() => {
     const audio = new Audio('/sounds/timer-tick.mp3');
     audio.preload = 'auto';
+    audio.loop = true; // Loop the long audio track
   
     const onCanPlayThrough = () => {
       if (audio) {
@@ -92,18 +93,7 @@ export default function CrorepatiChallengePage() {
     };
     
     const onError = (e: Event) => {
-      console.error("Audio loading error (raw event):", e);
-      const audioElement = e.target as HTMLAudioElement | null;
-      if (audioElement && audioElement.error) {
-        console.error("Audio Element Error Code:", audioElement.error.code);
-        console.error("Audio Element Error Message:", audioElement.error.message || "No message");
-        console.error("Full MediaError object:", audioElement.error);
-      } else if (audioElement) {
-        console.error("Audio element found on event, but 'error' property is missing, null, or has no code/message.", audioElement);
-      } else {
-        console.error("Event target is not an HTMLAudioElement or is null. e.target:", e.target);
-        console.error("Is the audio file present at public/sounds/timer-tick.mp3 and is it a valid MP3?");
-      }
+      console.error("Audio loading error:", e);
     };
   
     audio.addEventListener('canplaythrough', onCanPlayThrough);
@@ -147,7 +137,6 @@ export default function CrorepatiChallengePage() {
     }
   }, [gamePhase, loadQuestions]);
   
-  // Effect to start timer and audio when a new question is presented
   useEffect(() => {
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0) { 
       setTimeLeft(currentQuestion.timeLimit);
@@ -160,8 +149,7 @@ export default function CrorepatiChallengePage() {
       setTimerActive(true); 
 
       if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.pause(); 
-        timerTickAudioRef.current.currentTime = 0;
+        timerTickAudioRef.current.currentTime = 0; // Start from beginning for new question
         timerTickAudioRef.current.play().catch(error => console.error("Error playing timer sound:", error));
       }
     } else if (gamePhase !== 'SETUP' ) { 
@@ -199,7 +187,7 @@ export default function CrorepatiChallengePage() {
       }
       
       setTimeout(() => {
-        // States like answerRevealed, selectedAnswer, fiftyFifty are reset by the new question useEffect
+        // States like answerRevealed, selectedAnswer, fiftyFifty are reset by the question start useEffect
         const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
         setActiveTeamIndex(nextTeamIndex);
 
@@ -231,7 +219,6 @@ export default function CrorepatiChallengePage() {
   ]);
   
 
-  // Effect for timer countdown
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
   
@@ -239,14 +226,14 @@ export default function CrorepatiChallengePage() {
       intervalId = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
-    } else if (timerActive && timeLeft === 0) { // Timer ran out
-      handleAnswerSelect(null); // This will also stop the audio via its logic
+    } else if (timerActive && timeLeft === 0) { 
+      handleAnswerSelect(null); 
     }
   
     return () => {
-      clearInterval(intervalId); // Essential cleanup for this effect's interval
+      clearInterval(intervalId); 
     };
-  }, [timerActive, timeLeft, handleAnswerSelect]); // Dependency array size 3
+  }, [timerActive, timeLeft, handleAnswerSelect]); 
 
 
   const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll') => {
@@ -328,7 +315,7 @@ export default function CrorepatiChallengePage() {
 
   if (gamePhase === 'SETUP') {
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in md:pl-[calc(500px+2rem)]">
         <GameLogo className="mb-8" />
         <TeamSetupForm onStartGame={handleStartGame} maxTeams={MAX_TEAMS} />
       </main>
@@ -338,7 +325,7 @@ export default function CrorepatiChallengePage() {
   if (gamePhase === 'GAME_OVER') {
     const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in md:pl-[calc(500px+2rem)]">
         <GameLogo className="mb-6" />
         <PartyPopper className="w-24 h-24 text-accent mb-6 animate-bounce" />
         <h1 className="text-5xl font-bold font-headline mb-4 text-primary">Game Over!</h1>
@@ -354,7 +341,6 @@ export default function CrorepatiChallengePage() {
           setTeams([]); 
           setCurrentQuestionIndex(0);
           setActiveTeamIndex(0);
-          // Reset other relevant states if necessary
           setAnswerRevealed(false);
           setSelectedAnswer(null);
           setFiftyFiftyUsed(false);
@@ -375,7 +361,7 @@ export default function CrorepatiChallengePage() {
 
   if (!currentQuestion || !activeTeam) {
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 md:pl-[calc(500px+2rem)]">
         <GameLogo className="mb-8" />
         <p className="text-xl">Loading game...</p>
       </main>
@@ -383,7 +369,7 @@ export default function CrorepatiChallengePage() {
   }
   
   return (
-    <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow">
+    <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow md:pl-[calc(500px+2rem)]">
       <header className="w-full mb-6">
         <GameLogo size="small" />
       </header>
