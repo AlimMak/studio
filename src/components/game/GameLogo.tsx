@@ -12,7 +12,7 @@ interface GameLogoProps {
 const GameLogo: React.FC<GameLogoProps> = ({
   className,
   size = 'large',
-  leftImageSrc = '/don.png', // Changed from /amit.png
+  leftImageSrc = '/don.png', 
 }) => {
   const mainImageSize = size === 'large' ? { width: 250, height: 250 } : { width: 150, height: 150 };
 
@@ -30,15 +30,15 @@ const GameLogo: React.FC<GameLogoProps> = ({
       {/* Container for the fixed don.png image */}
       <div
         className="fixed left-0 top-[100px] bottom-0 z-0 print:hidden" // Positioned left, 100px from top, full height, behind other content
-        style={{ width: '150px' }} // Adjust this width as needed for don.png
+        style={{ width: '250px' }} // Increased width from 150px to 250px
       >
         <Image
           src={leftImageSrc}
-          alt="Host figure" // Updated alt text
+          alt="Host figure" 
           fill // Makes the image fill its parent div
           style={{ objectFit: 'contain' }} // 'contain' respects aspect ratio. Use 'cover' to fill and crop.
           data-ai-hint="host portrait"
-          sizes="150px" // Informs browser about the rendered width of the image
+          sizes="250px" // Updated sizes prop to match new width
           priority 
         />
       </div>
