@@ -263,8 +263,9 @@ export default function CrorepatiChallengePage() {
       setShowPhoneAFriend(true);
       toast({ title: "Phone a Friend Used!", description: "Consulting an expert..." });
     } else if (type === 'askYourTeam') {
+      setTimeLeft(prevTime => prevTime + 30);
       setShowTeamPoll(true);
-      toast({ title: "Ask Your Team Used!", description: "Time to confer with your team." });
+      toast({ title: "Ask Your Team Used!", description: "30 seconds added. Time to confer!" });
     }
   };
   
@@ -409,7 +410,7 @@ export default function CrorepatiChallengePage() {
             📞 Calling your friend... Ring ring... 📞
             <br/><br/>
             {currentQuestion && currentQuestion.options[currentQuestion.correctAnswerIndex] ? 
-             `Your friend thinks the answer might be <strong className="text-accent">${currentQuestion.options[currentQuestion.correctAnswerIndex]}</strong>.`
+             <>Your friend thinks the answer might be <strong className="text-accent">{currentQuestion.options[currentQuestion.correctAnswerIndex]}</strong>.</>
              : "Your friend is thinking..."}
             <br/> (But remember, they're not always right!)
           </DialogDescription>
