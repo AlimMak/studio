@@ -12,7 +12,7 @@ const GameLogo: React.FC<GameLogoProps> = ({ className, size = 'large' }) => {
   return (
     <div className={`flex flex-col items-center justify-center ${className}`}>
       <Image
-        src="/kbc-official-logo.png"
+        src="/kbc-official-logo.jpg" // Changed from .png to .jpg
         alt="Kaun Banega Crorepati Logo"
         width={imageSize.width}
         height={imageSize.height}
