@@ -198,12 +198,12 @@ export default function CrorepatiChallengePage() {
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
     teams.length, answerRevealed, isLifelineDialogActive, timerActive, 
-    isAudioInitialized, timeLeft // Added timeLeft here to re-evaluate if timer should be active when dialogs close
+    isAudioInitialized, timeLeft
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || (!timerActive && optionIndex !== null) ) { // Allow processing if timerActive is false due to timeout (optionIndex is null)
+    if (answerRevealed || (!timerActive && optionIndex !== null) ) { 
       return;
     }
     
@@ -232,18 +232,18 @@ export default function CrorepatiChallengePage() {
     const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
     setActiveTeamIndex(nextTeamIndex);
 
-    if (nextTeamIndex === 0) { 
-      if (currentQuestionIndex + 1 < questions.length) {
-        setCurrentQuestionIndex(prev => prev + 1);
-      } else {
-        setGamePhase('GAME_OVER');
-         if (isAudioInitialized && timerTickAudioRef.current) {
-            timerTickAudioRef.current.pause();
-            timerTickAudioRef.current.currentTime = 0;
-            timerTickAudioRef.current.load(); 
-        }
+    // Advance to the next question for the next team, or end game if out of questions
+    if (currentQuestionIndex + 1 < questions.length) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else {
+      setGamePhase('GAME_OVER');
+      if (isAudioInitialized && timerTickAudioRef.current) {
+        timerTickAudioRef.current.pause();
+        timerTickAudioRef.current.currentTime = 0;
+        timerTickAudioRef.current.load(); 
       }
     }
+    
     setAnswerRevealed(false); 
 
   }, [answerRevealed, gamePhase, activeTeamIndex, teams.length, currentQuestionIndex, questions.length, isAudioInitialized]);
