@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Diamond } from 'lucide-react';
@@ -34,7 +35,7 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
   };
 
   const { fill, stroke, text: textColor } = getShapeColors();
-  constisDisabledOrRevealed = disabled || (reveal && !(isSelected && !isCorrect) && !isCorrect);
+  const isDisabledOrRevealed = disabled || (reveal && !(isSelected && !isCorrect) && !isCorrect);
 
 
   return (
