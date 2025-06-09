@@ -94,9 +94,18 @@ export default function CrorepatiChallengePage() {
     };
     
     const onError = (e: Event) => {
-      console.error("Audio loading error:", e);
-      if (e.target && 'error' in e.target && (e.target as HTMLAudioElement).error) {
-        console.error("Audio element error property:", (e.target as HTMLAudioElement).error);
+      console.error("Audio loading error (raw event):", e);
+      
+      const audioElement = e.target as HTMLAudioElement | null;
+      if (audioElement && audioElement.error) {
+        console.error("Audio Element Error Code:", audioElement.error.code);
+        console.error("Audio Element Error Message:", audioElement.error.message || "No message");
+        console.error("Full MediaError object:", audioElement.error);
+      } else if (audioElement) {
+        console.error("Audio element found on event, but 'error' property is missing, null, or has no code/message.", audioElement);
+      } else {
+        console.error("Event target is not an HTMLAudioElement or is null. e.target:", e.target);
+        console.error("Is the audio file present at public/sounds/timer-tick.mp3 and is it a valid MP3?");
       }
     };
   
@@ -146,9 +155,8 @@ export default function CrorepatiChallengePage() {
       setTimeLeft(currentQuestion.timeLimit);
       setTimerActive(true);
       setSelectedAnswer(null);
-      // fiftyFiftyUsed and fiftyFiftyOptions are reset per question in handleAnswerSelect's timeout
     }
-  }, [gamePhase, currentQuestion, timerActive, answerRevealed]);
+  }, [gamePhase, currentQuestion, timerActive, answerRevealed]); // Removed fiftyFiftyUsed, fiftyFiftyOptions from deps
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || !timerActive) return;
@@ -214,7 +222,7 @@ export default function CrorepatiChallengePage() {
   
     return () => {
       clearInterval(intervalId);
-      if (timerTickAudioRef.current && !timerActive) {
+      if (timerTickAudioRef.current && !timerActive) { // Ensure pause only if it was supposed to be paused
           timerTickAudioRef.current.pause();
       }
     };
