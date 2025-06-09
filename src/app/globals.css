@@ -9,7 +9,8 @@ body {
 @layer base {
   :root {
     /* KBC Inspired Dark Theme: Deep blues, rich golds, vibrant highlights */
-    --background: 220 60% 10%; /* Deep, dark blue */
+    --background-color-val: 220 60% 10%; /* Deep, dark blue - kept for fallback or non-image areas */
+    --background: var(--background-color-val); /* Fallback */
     --foreground: 210 40% 90%; /* Off-white/light grey for text */
     
     --card: 220 50% 15%; /* Slightly lighter blue for cards */
@@ -71,7 +72,13 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    background-image: url('/kbc-background.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed; /* Ensures the background doesn't scroll with content */
+    color: hsl(var(--foreground));
+    min-height: 100vh; /* Ensure body takes full viewport height */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
