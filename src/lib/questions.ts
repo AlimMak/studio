@@ -308,44 +308,43 @@ export const sampleQuestions: Question[] = [
     timeLimit: 15,
   },
 
-  // Difficulty 10 (Very Hard) - Now $50,000, 25 seconds
+  // Difficulty 10 (Very Hard) - $20,000,000, 15 seconds
   {
     id: 'q37',
     text: 'Who developed the first programmable computer?',
     options: ['Alan Turing', 'Charles Babbage', 'Konrad Zuse', 'Bill Gates'],
     correctAnswerIndex: 2,
-    moneyValue: 50000, // Changed from 20000000
-    timeLimit: 25,    // Changed from 15
+    moneyValue: 20000000,
+    timeLimit: 15,
   },
   {
     id: 'q38',
     text: 'What is the rarest blood type?',
     options: ['AB+', 'B-', 'AB-', 'O-'],
     correctAnswerIndex: 2,
-    moneyValue: 50000, // Changed from 20000000
-    timeLimit: 25,    // Changed from 15
+    moneyValue: 20000000,
+    timeLimit: 15,
   },
   {
     id: 'q39',
     text: 'Which element has the highest melting point?',
     options: ['Iron', 'Tungsten', 'Titanium', 'Uranium'],
     correctAnswerIndex: 1,
-    moneyValue: 50000, // Changed from 20000000
-    timeLimit: 25,    // Changed from 15
+    moneyValue: 20000000,
+    timeLimit: 15,
   },
   {
     id: 'q40',
     text: 'Which galaxy is closest to the Milky Way?',
     options: ['Triangulum', 'Messier 87', 'Andromeda', 'Large Magellanic Cloud'],
     correctAnswerIndex: 2,
-    moneyValue: 50000, // Changed from 20000000
-    timeLimit: 25,    // Changed from 15
+    moneyValue: 20000000,
+    timeLimit: 15,
   },
 ];
 
 export const getQuestions = (): Question[] => {
   // Sort by moneyValue to ensure progression, which respects the difficulty order
-  // After the change, Tier 10 questions ($50k) will appear after Tier 3 ($10k) and before Tier 4 ($75k)
   return [...sampleQuestions].sort((a, b) => a.moneyValue - b.moneyValue);
 };
 
