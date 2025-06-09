@@ -339,7 +339,7 @@ export const sampleQuestions: Question[] = [
     options: ['Triangulum', 'Messier 87', 'Andromeda', 'Large Magellanic Cloud'],
     correctAnswerIndex: 2,
     moneyValue: 50000,
-    timeLimit: 3,
+    timeLimit: 30,
   },
 ];
 

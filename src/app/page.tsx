@@ -92,8 +92,8 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    setTimerActive(false); 
-    setTimeLeft(0);
+    setTimerActive(true); 
+    setTimeLeft(30); // Default for first question if timeLimit isn't immediately available
   }, []);
 
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function CrorepatiChallengePage() {
     audio.addEventListener('canplaythrough', handleCanPlay);
     audio.addEventListener('error', handleError);
     
-    audio.load();
+    audio.load(); // Important to load the audio
 
     return () => {
       console.log("Audio: Cleaning up audio element");
@@ -186,6 +186,12 @@ export default function CrorepatiChallengePage() {
     if (isNewTurnInitialization) {
         console.log("TIMER_DEBUG: New turn initialization. Q_ID:", currentQuestion.id, "TimeLimit:", currentQuestion.timeLimit, "isLifelineActive:", isLifelineDialogActive);
         
+        if (isAudioInitialized && timerTickAudioRef.current) {
+            console.log("Audio: Pausing and resetting audio for new turn.");
+            timerTickAudioRef.current.pause();
+            timerTickAudioRef.current.currentTime = 0;
+        }
+
         setTimeLeft(currentQuestion.timeLimit);
         setSelectedAnswer(null);
         setFiftyFiftyUsedThisTurn(false);
@@ -201,6 +207,10 @@ export default function CrorepatiChallengePage() {
         }
     } else if (gamePhase === 'SETUP') {
         console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
+        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+            console.log("Audio: Pausing audio (SETUP phase).");
+            timerTickAudioRef.current.pause();
+        }
         setTimerActive(false); 
         setTimeLeft(0);
         setAnswerRevealed(false);
@@ -218,6 +228,10 @@ export default function CrorepatiChallengePage() {
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) { 
             console.log("TIMER_DEBUG: Game over, answer revealed, or lifeline. Setting timerActive to false.");
+            if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+                console.log("Audio: Pausing audio (Game Over/Revealed/Lifeline).");
+                timerTickAudioRef.current.pause();
+            }
             setTimerActive(false); 
         }
     }
@@ -228,13 +242,17 @@ export default function CrorepatiChallengePage() {
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, toast, activeTeam, answerRevealed, timerActive
+    isLifelineDialogActive, toast, activeTeam, answerRevealed, timerActive, isAudioInitialized // Added isAudioInitialized
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || (!timerActive && optionIndex !== null && currentQuestion && timeLeft > 0 && currentQuestion.timeLimit > 0) ) {
       return;
+    }
+    if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing audio (answer selected).");
+        timerTickAudioRef.current.pause();
     }
     setTimerActive(false); 
     setSelectedAnswer(optionIndex);
@@ -252,7 +270,7 @@ export default function CrorepatiChallengePage() {
          toast({ title: optionIndex === null ? "Time's Up!" : "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
       }
     }, 1500);
-  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, timeLeft]);
+  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, timeLeft, isAudioInitialized]); // Added isAudioInitialized
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
@@ -271,19 +289,39 @@ export default function CrorepatiChallengePage() {
     let intervalId: NodeJS.Timeout | undefined;
 
     if (timerActive && timeLeft > 0 && !isLifelineDialogActive) {
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
+        console.log("Audio: Attempting to play timer tick (timer active).");
+        timerTickAudioRef.current.play().catch(error => {
+          console.error("Audio: Playback error:", error);
+        });
+      }
       console.log("TIMER_DEBUG: Interval timer starting. timeLeft:", timeLeft);
       intervalId = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
     } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0) { 
+      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing timer tick (time up).");
+        timerTickAudioRef.current.pause();
+      }
       console.log("TIMER_DEBUG: Time's up! Handling answer select null.");
       handleAnswerSelect(null); 
+    } else {
+      // This else covers timerActive false, timeLeft <=0 while active, or lifeline dialog active
+      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing timer tick (timer not active or other condition).");
+        timerTickAudioRef.current.pause();
+      }
     }
     
     return () => {
       clearInterval(intervalId);
+      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing timer tick (timer effect cleanup).");
+        timerTickAudioRef.current.pause();
+      }
     };
-  }, [timerActive, timeLeft, isLifelineDialogActive, answerRevealed, handleAnswerSelect, currentQuestion]);
+  }, [timerActive, timeLeft, isLifelineDialogActive, answerRevealed, handleAnswerSelect, currentQuestion, isAudioInitialized]); // Added isAudioInitialized
 
   useEffect(() => {
     let lifelineIntervalId: NodeJS.Timeout | undefined;
@@ -339,6 +377,10 @@ export default function CrorepatiChallengePage() {
       setFiftyFiftyOptions(optionsToHide);
       toast({ title: "50:50 Used!", description: "Two incorrect options removed." });
     } else if (type === 'phoneAFriend' || type === 'askYourTeam') {
+      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing audio (lifeline used).");
+        timerTickAudioRef.current.pause();
+      }
       setMainTimerWasActiveBeforeLifeline(timerActive); 
       setTimerActive(false); 
       setIsLifelineDialogActive(true);
@@ -369,6 +411,7 @@ export default function CrorepatiChallengePage() {
     setIsLifelineDialogActive(false);
 
     if (mainTimerWasActiveBeforeLifeline && currentQuestion && !answerRevealed && timeLeft > 0) {
+      // The timer useEffect will handle playing audio if timerActive becomes true
       setTimerActive(true); 
     }
     setMainTimerWasActiveBeforeLifeline(false); 
@@ -556,6 +599,8 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
+    
+    
 
     
 
