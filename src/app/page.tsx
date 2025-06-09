@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import type { Team, Question, GamePhase, TeamPollData } from '@/lib/types'; // Updated to TeamPollData
+import type { Team, Question, GamePhase } from '@/lib/types';
 import { getQuestions } from '@/lib/questions';
 import { generateQuestionVariation } from '@/ai/flows/question-variation';
 
@@ -12,7 +12,6 @@ import QuestionDisplay from '@/components/game/QuestionDisplay';
 import AnswerButton from '@/components/game/AnswerButton';
 import TimerDisplay from '@/components/game/TimerDisplay';
 import LifelineControls from '@/components/game/LifelineControls';
-import TeamPollResults from '@/components/game/TeamPollResults'; // Renamed import
 import GameLogo from '@/components/game/GameLogo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -37,8 +36,7 @@ export default function CrorepatiChallengePage() {
   const [fiftyFiftyUsedThisTurn, setFiftyFiftyUsedThisTurn] = useState(false);
   const [fiftyFiftyOptions, setFiftyFiftyOptions] = useState<number[] | null>(null);
 
-  const [showTeamPoll, setShowTeamPoll] = useState(false); // Renamed from showAudiencePoll
-  const [teamPollData, setTeamPollData] = useState<TeamPollData[] | null>(null); // Renamed from audiencePollData
+  const [showTeamPoll, setShowTeamPoll] = useState(false);
   const [showPhoneAFriend, setShowPhoneAFriend] = useState(false);
 
   const { toast } = useToast();
@@ -54,7 +52,7 @@ export default function CrorepatiChallengePage() {
       id: `team-${index + 1}-${Date.now()}`,
       name: name.trim(),
       score: 0,
-      lifelines: { fiftyFifty: true, phoneAFriend: true, askYourTeam: true }, // Renamed lifeline
+      lifelines: { fiftyFifty: true, phoneAFriend: true, askYourTeam: true },
     }));
     setTeams(newTeams);
     setCurrentQuestionIndex(0);
@@ -64,8 +62,7 @@ export default function CrorepatiChallengePage() {
     setSelectedAnswer(null);
     setFiftyFiftyUsedThisTurn(false);
     setFiftyFiftyOptions(null);
-    setShowTeamPoll(false); // Renamed
-    setTeamPollData(null); // Renamed
+    setShowTeamPoll(false);
     setShowPhoneAFriend(false);
   }, [
     setTeams, 
@@ -76,8 +73,7 @@ export default function CrorepatiChallengePage() {
     setSelectedAnswer,
     setFiftyFiftyUsedThisTurn,
     setFiftyFiftyOptions,
-    setShowTeamPoll, // Renamed
-    setTeamPollData, // Renamed
+    setShowTeamPoll,
     setShowPhoneAFriend
   ]);
 
@@ -145,7 +141,7 @@ export default function CrorepatiChallengePage() {
       setAnswerRevealed(false); 
       setFiftyFiftyUsedThisTurn(false);
       setFiftyFiftyOptions(null);
-      setShowTeamPoll(false); // Renamed
+      setShowTeamPoll(false);
       setShowPhoneAFriend(false);
       setTimerActive(true); 
 
@@ -236,7 +232,7 @@ export default function CrorepatiChallengePage() {
   }, [timerActive, timeLeft, handleAnswerSelect]); 
 
 
-  const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => { // Updated type
+  const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => {
     if (!activeTeam || !currentQuestion || disabledLifeline(type)) return;
 
     const newTeams = teams.map(t => {
@@ -266,49 +262,13 @@ export default function CrorepatiChallengePage() {
     } else if (type === 'phoneAFriend') {
       setShowPhoneAFriend(true);
       toast({ title: "Phone a Friend Used!", description: "Consulting an expert..." });
-    } else if (type === 'askYourTeam') { // Renamed from audiencePoll
-      const pollResults: TeamPollData[] = currentQuestion.options.map((_, index) => ({ // Updated type
-        optionIndex: index,
-        percentage: 0,
-      }));
-      let remainingPercentage = 100;
-      
-      if (currentQuestion.options.length > 0) { 
-        pollResults[currentQuestion.correctAnswerIndex].percentage = Math.floor(Math.random() * 41) + 30; 
-        remainingPercentage -= pollResults[currentQuestion.correctAnswerIndex].percentage;
-
-        const otherOptionIndices = currentQuestion.options.map((_,i) => i).filter(i => i !== currentQuestion.correctAnswerIndex);
-        otherOptionIndices.forEach((optIndex, arrIdx) => {
-            if (arrIdx === otherOptionIndices.length -1) { 
-                pollResults[optIndex].percentage = remainingPercentage;
-            } else {
-                const randomShare = Math.floor(Math.random() * (remainingPercentage / (otherOptionIndices.length - arrIdx || 1))); 
-                pollResults[optIndex].percentage = randomShare;
-                remainingPercentage -= randomShare;
-            }
-        });
-        
-        let currentSum = pollResults.reduce((sum, item) => sum + item.percentage, 0);
-        if (currentSum !== 100 && pollResults.length > 0) {
-            const diff = 100 - currentSum;
-            const targetIdx = pollResults.findIndex(p => p.optionIndex !== currentQuestion.correctAnswerIndex && p.percentage + diff >= 0); 
-            if (targetIdx !== -1) {
-              pollResults[targetIdx].percentage += diff;
-            } else { 
-              const fallbackIdx = pollResults.findIndex(p => p.percentage + diff >=0);
-              if (fallbackIdx !== -1) pollResults[fallbackIdx].percentage += diff;
-              else if (pollResults.length > 0) pollResults[0].percentage += diff; 
-            }
-        }
-      }
-
-      setTeamPollData(pollResults.sort((a,b) => b.percentage - a.percentage)); // Renamed
-      setShowTeamPoll(true); // Renamed
-      toast({ title: "Ask Your Team Used!", description: "See what your team thinks." }); // Updated toast
+    } else if (type === 'askYourTeam') {
+      setShowTeamPoll(true);
+      toast({ title: "Ask Your Team Used!", description: "Time to confer with your team." });
     }
   };
   
-  const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => { // Updated type
+  const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => {
       if(!activeTeam) return true;
       return !activeTeam.lifelines[type] || answerRevealed || !timerActive || (type === 'fiftyFifty' && fiftyFiftyUsedThisTurn);
   }
@@ -345,8 +305,7 @@ export default function CrorepatiChallengePage() {
           setSelectedAnswer(null);
           setFiftyFiftyUsedThisTurn(false);
           setFiftyFiftyOptions(null);
-          setShowTeamPoll(false); // Renamed
-          setTeamPollData(null); // Renamed
+          setShowTeamPoll(false);
           setShowPhoneAFriend(false);
           if (isAudioInitialized && timerTickAudioRef.current) {
             timerTickAudioRef.current.pause();
@@ -427,17 +386,16 @@ export default function CrorepatiChallengePage() {
       </div>
 
 
-      <Dialog open={showTeamPoll} onOpenChange={setShowTeamPoll}> {/* Renamed */}
+      <Dialog open={showTeamPoll} onOpenChange={setShowTeamPoll}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ask Your Team Results</DialogTitle> {/* Updated title */}
-            <DialogDescription>
-              Your team has cast their votes. Here are the results: {/* Updated description */}
-            </DialogDescription>
+            <DialogTitle>Ask Your Team</DialogTitle>
           </DialogHeader>
-          {teamPollData && currentQuestion && <TeamPollResults pollData={teamPollData} options={currentQuestion.options}/>} {/* Renamed */}
+          <DialogDescription className="my-4 text-lg text-center">
+            Confer With Your Team For 30 Seconds
+          </DialogDescription>
           <DialogFooter>
-            <Button onClick={() => setShowTeamPoll(false)}>Close</Button> {/* Renamed */}
+            <Button onClick={() => setShowTeamPoll(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -463,3 +421,4 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
+

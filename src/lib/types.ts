@@ -16,13 +16,8 @@ export interface Team {
   lifelines: {
     fiftyFifty: boolean;
     phoneAFriend: boolean;
-    askYourTeam: boolean; // Renamed from audiencePoll
+    askYourTeam: boolean;
   };
 }
 
 export type GamePhase = 'SETUP' | 'PLAYING' | 'GAME_OVER';
-
-export interface TeamPollData { // Renamed from AudiencePollData
-  optionIndex: number;
-  percentage: number;
-}
