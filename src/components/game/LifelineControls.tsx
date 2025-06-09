@@ -1,13 +1,13 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Phone, MessageCircleQuestion, Users, XCircle } from 'lucide-react'; // Added Users, kept MessageCircleQuestion
+import { Phone, Users, XCircle } from 'lucide-react'; // Replaced MessageCircleQuestion with Users
 import type { Team } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface LifelineControlsProps {
   activeTeam: Team | null;
-  onUseLifeline: (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => void; // Updated type
+  onUseLifeline: (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => void;
   disabled?: boolean; // General disable for all lifelines (e.g. answer revealed)
 }
 
@@ -20,7 +20,7 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
 
 
   const renderLifelineButton = (
-    type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam', // Updated type
+    type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam',
     icon: React.ReactNode,
     label: string | React.ReactNode
   ) => {
@@ -35,11 +35,11 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
             lifelineBaseClass,
             isLifelineUsed || disabled ? usedLifelineClass : activeLifelineClass
             )}
-            aria-label={`Use ${typeof label === 'string' ? label : type} Lifeline`}
+            aria-label={`Use ${typeof label === 'string' && label.length > 0 ? label : type.replace(/([A-Z])/g, ' $1').trim()} Lifeline`}
         >
             {isLifelineUsed ? <XCircle className="w-8 h-8 md:w-10 md:h-10" /> : icon}
         </Button>
-        {typeof label === 'string' && !isLifelineUsed && (
+        {typeof label === 'string' && label.length > 0 && !isLifelineUsed && (
              <span className="mt-1 text-xs text-foreground">{label}</span>
         )}
          {isLifelineUsed && (
@@ -55,12 +55,12 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
         {renderLifelineButton(
           'fiftyFifty',
           <span className="font-bold text-lg md:text-xl">50:50</span>,
-          "" // Label is part of the icon for 50:50
+          "50:50" // Added label here
         )}
         {renderLifelineButton(
-          'askYourTeam', // Renamed from audiencePoll
-          <Users className="w-7 h-7 md:w-8 md:h-8" />, // Changed icon to Users
-          "Ask Team" // Renamed label
+          'askYourTeam', 
+          <Users className="w-7 h-7 md:w-8 md:h-8" />, 
+          "Ask Team" 
         )}
         {renderLifelineButton(
           'phoneAFriend',
