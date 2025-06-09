@@ -161,7 +161,16 @@ export default function CrorepatiChallengePage() {
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || !timerActive || optionIndex === null) return;
+    // If answer already revealed, or timer not active (and it's a user click, not a timeout)
+    // For user clicks (optionIndex is not null): if answerRevealed or !timerActive, then return.
+    // For timeouts (optionIndex is null): this guard should not prevent execution if timerActive was true.
+    if (optionIndex !== null && (answerRevealed || !timerActive)) {
+      return;
+    }
+    // If it's a timeout (optionIndex is null) but the timer wasn't active (e.g. state inconsistency), also bail.
+    if (optionIndex === null && !timerActive) {
+      return;
+    }
 
     setTimerActive(false); 
     if (isAudioInitialized && timerTickAudioRef.current) {
@@ -172,7 +181,7 @@ export default function CrorepatiChallengePage() {
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
 
-    const isCorrect = currentQuestion && optionIndex === currentQuestion.correctAnswerIndex;
+    const isCorrect = currentQuestion && optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
     
     setTimeout(() => {
       if (isCorrect) {
@@ -181,7 +190,7 @@ export default function CrorepatiChallengePage() {
           team.id === activeTeam?.id ? { ...team, score: team.score + (currentQuestion?.moneyValue || 0) } : team
         ));
       } else {
-         toast({ title: "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
+         toast({ title: optionIndex === null ? "Time's Up!" : "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
       }
     }, 1500);
   }, [
@@ -191,6 +200,7 @@ export default function CrorepatiChallengePage() {
     activeTeam, 
     toast, 
     isAudioInitialized,
+    // Removed setSelectedAnswer, setAnswerRevealed, setTimerActive from here as they are called within
   ]);
   
   const proceedToNextTurnOrQuestion = useCallback(() => {
