@@ -83,7 +83,7 @@ export default function CrorepatiChallengePage() {
   useEffect(() => {
     const audio = new Audio('/sounds/timer-tick.mp3');
     audio.preload = 'auto';
-    audio.loop = true; // Loop the long audio track
+    audio.loop = true; 
   
     const onCanPlayThrough = () => {
       if (audio) {
@@ -149,16 +149,17 @@ export default function CrorepatiChallengePage() {
       setTimerActive(true); 
 
       if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.currentTime = 0; // Start from beginning for new question
+        timerTickAudioRef.current.currentTime = 0; 
         timerTickAudioRef.current.play().catch(error => console.error("Error playing timer sound:", error));
       }
-    } else if (gamePhase !== 'SETUP' ) { 
+    } else if (gamePhase !== 'PLAYING' && gamePhase !== 'SETUP' ) { 
         setTimerActive(false);
         if (isAudioInitialized && timerTickAudioRef.current) {
             timerTickAudioRef.current.pause();
             timerTickAudioRef.current.currentTime = 0;
         }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gamePhase, currentQuestion, activeTeamIndex, isAudioInitialized, teams.length]);
 
 
@@ -210,15 +211,16 @@ export default function CrorepatiChallengePage() {
     teams, 
     currentQuestionIndex, 
     questions, 
-    gamePhase, 
-    setGamePhase, 
-    setTeams, 
-    setActiveTeamIndex, 
-    setCurrentQuestionIndex, 
-    isAudioInitialized
+    // gamePhase, // gamePhase might cause issues if included here, as it changes.
+    // setGamePhase, // Same for setGamePhase
+    // setTeams, // Not stable
+    // setActiveTeamIndex, // Not stable
+    // setCurrentQuestionIndex, // Not stable
+    isAudioInitialized // Added to dependencies
   ]);
   
 
+  // Effect for timer countdown
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
   
@@ -227,11 +229,12 @@ export default function CrorepatiChallengePage() {
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
     } else if (timerActive && timeLeft === 0) { 
-      handleAnswerSelect(null); 
+      handleAnswerSelect(null); // This will also stop audio
     }
   
     return () => {
       clearInterval(intervalId); 
+      // Audio stop is handled by handleAnswerSelect or new question setup
     };
   }, [timerActive, timeLeft, handleAnswerSelect]); 
 
@@ -315,7 +318,7 @@ export default function CrorepatiChallengePage() {
 
   if (gamePhase === 'SETUP') {
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in md:pl-[calc(500px+2rem)]">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
         <GameLogo className="mb-8" />
         <TeamSetupForm onStartGame={handleStartGame} maxTeams={MAX_TEAMS} />
       </main>
@@ -325,7 +328,7 @@ export default function CrorepatiChallengePage() {
   if (gamePhase === 'GAME_OVER') {
     const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in md:pl-[calc(500px+2rem)]">
+      <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in">
         <GameLogo className="mb-6" />
         <PartyPopper className="w-24 h-24 text-accent mb-6 animate-bounce" />
         <h1 className="text-5xl font-bold font-headline mb-4 text-primary">Game Over!</h1>
@@ -361,7 +364,7 @@ export default function CrorepatiChallengePage() {
 
   if (!currentQuestion || !activeTeam) {
     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4 md:pl-[calc(500px+2rem)]">
+      <main className="flex-grow flex flex-col items-center justify-center p-4">
         <GameLogo className="mb-8" />
         <p className="text-xl">Loading game...</p>
       </main>
@@ -369,7 +372,7 @@ export default function CrorepatiChallengePage() {
   }
   
   return (
-    <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow md:pl-[calc(500px+2rem)]">
+    <main className="flex-grow container mx-auto p-4 flex flex-col items-start justify-center animate-fade-in-slow">
       <header className="w-full mb-6">
         <GameLogo size="small" />
       </header>
