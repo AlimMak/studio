@@ -12,7 +12,7 @@ interface GameLogoProps {
 const GameLogo: React.FC<GameLogoProps> = ({
   className,
   size = 'large',
-  leftImageSrc = 'https://placehold.co/125x125.png', // Default placeholder for the left image
+  leftImageSrc = '/amit.png', // Default placeholder for the left image
 }) => {
   const mainImageSize = size === 'large' ? { width: 250, height: 250 } : { width: 150, height: 150 };
   // Adjust left image size relative to the main logo size
@@ -25,7 +25,7 @@ const GameLogo: React.FC<GameLogoProps> = ({
         alt="Secondary Brand Logo"
         width={leftImageDimensions.width}
         height={leftImageDimensions.height}
-        data-ai-hint="brand icon" // AI hint for the left image
+        data-ai-hint="host portrait" 
       />
       <Image
         src="/kbc-official-logo.png" // Existing KBC logo
