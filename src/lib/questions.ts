@@ -2,7 +2,7 @@
 import type { Question } from './types';
 
 export const sampleQuestions: Question[] = [
-  // Difficulty 1 (Very Easy)
+  // Difficulty 1 (Very Easy) - $100, 30 seconds
   {
     id: 'q1',
     text: 'What is the highest mountain in the world?',
@@ -36,7 +36,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 30,
   },
 
-  // Difficulty 2
+  // Difficulty 2 - $1,000, 30 seconds
   {
     id: 'q5',
     text: 'Where is the 2nd highest mountain, K2, located?',
@@ -70,7 +70,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 30,
   },
 
-  // Difficulty 3
+  // Difficulty 3 - $10,000, 30 seconds
   {
     id: 'q9',
     text: 'What is Donald Trump’s middle name?',
@@ -104,7 +104,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 30,
   },
 
-  // Difficulty 4
+  // Difficulty 4 - $75,000, 25 seconds
   {
     id: 'q13',
     text: 'What is the heaviest overall human organ?',
@@ -138,7 +138,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 25,
   },
 
-  // Difficulty 5
+  // Difficulty 5 - $200,000, 25 seconds
   {
     id: 'q17',
     text: 'Where were the first Olympic games held?',
@@ -172,7 +172,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 25,
   },
 
-  // Difficulty 6
+  // Difficulty 6 - $500,000, 25 seconds
   {
     id: 'q21',
     text: 'What fruit is the Cutie brand known for?',
@@ -206,7 +206,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 25,
   },
 
-  // Difficulty 7
+  // Difficulty 7 - $1,250,000, 20 seconds
   {
     id: 'q25',
     text: 'What country is Kadhi Khawsa from?',
@@ -240,7 +240,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 20,
   },
 
-  // Difficulty 8
+  // Difficulty 8 - $3,000,000, 20 seconds
   {
     id: 'q29',
     text: 'What year did cricket begin in India?',
@@ -274,7 +274,7 @@ export const sampleQuestions: Question[] = [
     timeLimit: 20,
   },
 
-  // Difficulty 9
+  // Difficulty 9 - $7,500,000, 15 seconds
   {
     id: 'q33',
     text: 'What is the only U.S. state to grow coffee commercially?',
@@ -303,47 +303,49 @@ export const sampleQuestions: Question[] = [
     id: 'q36',
     text: 'What is the deepest part of the ocean?',
     options: ['Mariana Trench', 'Challenger Deep', 'Tonga Trench', 'Java Trench'],
-    correctAnswerIndex: 0, 
+    correctAnswerIndex: 0,
     moneyValue: 7500000,
     timeLimit: 15,
   },
 
-  // Difficulty 10 (Very Hard)
+  // Difficulty 10 (Very Hard) - Now $50,000, 25 seconds
   {
     id: 'q37',
     text: 'Who developed the first programmable computer?',
     options: ['Alan Turing', 'Charles Babbage', 'Konrad Zuse', 'Bill Gates'],
     correctAnswerIndex: 2,
-    moneyValue: 20000000,
-    timeLimit: 15,
+    moneyValue: 50000, // Changed from 20000000
+    timeLimit: 25,    // Changed from 15
   },
   {
     id: 'q38',
     text: 'What is the rarest blood type?',
     options: ['AB+', 'B-', 'AB-', 'O-'],
     correctAnswerIndex: 2,
-    moneyValue: 20000000,
-    timeLimit: 15,
+    moneyValue: 50000, // Changed from 20000000
+    timeLimit: 25,    // Changed from 15
   },
   {
     id: 'q39',
     text: 'Which element has the highest melting point?',
     options: ['Iron', 'Tungsten', 'Titanium', 'Uranium'],
     correctAnswerIndex: 1,
-    moneyValue: 20000000,
-    timeLimit: 15,
+    moneyValue: 50000, // Changed from 20000000
+    timeLimit: 25,    // Changed from 15
   },
   {
     id: 'q40',
     text: 'Which galaxy is closest to the Milky Way?',
     options: ['Triangulum', 'Messier 87', 'Andromeda', 'Large Magellanic Cloud'],
     correctAnswerIndex: 2,
-    moneyValue: 20000000,
-    timeLimit: 15,
+    moneyValue: 50000, // Changed from 20000000
+    timeLimit: 25,    // Changed from 15
   },
 ];
 
 export const getQuestions = (): Question[] => {
   // Sort by moneyValue to ensure progression, which respects the difficulty order
+  // After the change, Tier 10 questions ($50k) will appear after Tier 3 ($10k) and before Tier 4 ($75k)
   return [...sampleQuestions].sort((a, b) => a.moneyValue - b.moneyValue);
 };
+
