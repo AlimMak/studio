@@ -187,6 +187,21 @@ export default function CrorepatiChallengePage() {
     if (isNewTurnInitialization) {
         console.log("TIMER_DEBUG: New turn initialization. Q_ID:", currentQuestion.id, "TimeLimit:", currentQuestion.timeLimit, "isLifelineActive:", isLifelineDialogActive);
         
+        // Explicitly stop timer and audio from previous turn before resetting states
+        if (timerActive) {
+            setTimerActive(false); // This will trigger the timer useEffect to pause audio
+            console.log("TIMER_DEBUG: Explicitly stopped timerActive for new turn setup.");
+        } else if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+            // If timer wasn't active but audio somehow was, pause it.
+            timerTickAudioRef.current.pause();
+            console.log("Audio: Paused explicitly at start of new turn (timer wasn't active).");
+        }
+
+        if (isAudioInitialized && timerTickAudioRef.current) {
+            timerTickAudioRef.current.currentTime = 0; // Reset audio to beginning
+            console.log("Audio: CurrentTime reset for new turn.");
+        }
+        
         setTimeLeft(currentQuestion.timeLimit);
         setSelectedAnswer(null);
         setFiftyFiftyUsedThisTurn(false);
@@ -194,28 +209,15 @@ export default function CrorepatiChallengePage() {
         setAnswerRevealed(false); 
 
         if (currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
-            console.log("TIMER_DEBUG: Setting timerActive to true.");
-            setTimerActive(true);
-            if (isAudioInitialized && timerTickAudioRef.current) {
-                if (!timerTickAudioRef.current.paused) {
-                    timerTickAudioRef.current.pause();
-                    console.log("Audio: Paused previous for new turn (in new turn init)");
-                }
-                timerTickAudioRef.current.currentTime = 0;
-                // Minimal audio play attempt for now, focus is on timer
-                // timerTickAudioRef.current.play().catch(e => console.error("Audio: Play error in new turn init:", e));
-            }
+            console.log("TIMER_DEBUG: Setting timerActive to true for new turn.");
+            setTimerActive(true); // This will trigger the timer useEffect, which will attempt to play audio
         } else { 
-            console.log("TIMER_DEBUG: Setting timerActive to false. Reason: timeLimit <= 0 or lifeline dialog active.");
-            setTimerActive(false);
-             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-                timerTickAudioRef.current.pause();
-                console.log("Audio: Paused (no time limit or lifeline active in new turn init)");
-            }
+            console.log("TIMER_DEBUG: Setting timerActive to false for new turn. Reason: timeLimit <= 0 or lifeline dialog active.");
+            setTimerActive(false); // Ensures timer useEffect handles audio pausing if necessary
         }
     } else if (gamePhase === 'SETUP') {
         console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
-        setTimerActive(false);
+        setTimerActive(false); // This will trigger audio pause via timer useEffect
         setTimeLeft(0);
         setAnswerRevealed(false);
         setSelectedAnswer(null);
@@ -229,10 +231,6 @@ export default function CrorepatiChallengePage() {
         setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
         setPhoneAFriendLifelineTimerActive(false);
         setMainTimerWasActiveBeforeLifeline(false);
-        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-            timerTickAudioRef.current.pause();
-            console.log("Audio: Paused (SETUP phase)");
-        }
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) {
             console.log("TIMER_DEBUG: Game over, answer revealed, or lifeline. Setting timerActive to false.");
@@ -240,15 +238,15 @@ export default function CrorepatiChallengePage() {
         }
     }
     
-    if (isNewTurnInitialization || (gamePhase !== prevGamePhaseRef.current && gamePhase === 'SETUP') ) {
-        prevGamePhaseRef.current = gamePhase;
-        prevCurrentQuestionIndexRef.current = currentQuestionIndex;
-        prevActiveTeamIndexRef.current = activeTeamIndex;
-    }
+    // Update prev refs *after* all logic for the current render has been processed
+    // This was a key part of the fix for the timer itself.
+    prevGamePhaseRef.current = gamePhase;
+    prevCurrentQuestionIndexRef.current = currentQuestionIndex;
+    prevActiveTeamIndexRef.current = activeTeamIndex;
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, isAudioInitialized, toast, activeTeam, answerRevealed
+    isLifelineDialogActive, isAudioInitialized, toast, activeTeam, answerRevealed, timerActive // Added timerActive
   ]);
 
 
@@ -281,16 +279,12 @@ export default function CrorepatiChallengePage() {
     
     if (nextQuestionIndexToUse < questions.length) {
       setCurrentQuestionIndex(nextQuestionIndexToUse); 
-      setAnswerRevealed(false);
+      // setAnswerRevealed(false); // This is handled by the new turn initialization logic
     } else {
       setGamePhase('GAME_OVER');
-      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.currentTime = 0;
-         console.log("Audio: Paused (Game Over)");
-      }
+      // setTimerActive(false) will be handled by main useEffect when phase changes
     }
-  }, [answerRevealed, gamePhase, activeTeamIndex, teams.length, currentQuestionIndex, questions.length, isAudioInitialized]);
+  }, [answerRevealed, gamePhase, currentQuestionIndex, questions.length]);
 
 
   useEffect(() => {
@@ -298,19 +292,22 @@ export default function CrorepatiChallengePage() {
 
     if (timerActive && timeLeft > 0 && !isLifelineDialogActive) {
       console.log("TIMER_DEBUG: Interval timer starting. timeLeft:", timeLeft);
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
+          timerTickAudioRef.current.play().catch(e => console.error("Audio: Play error in timer useEffect (timer starting/resuming):", e));
+          console.log("Audio: Attempting to play from timer useEffect (timer is active).");
+      }
       intervalId = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
     } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0) { 
       console.log("TIMER_DEBUG: Time's up! Handling answer select null.");
-      handleAnswerSelect(null); 
+      handleAnswerSelect(null); // This will setTimerActive(false)
     }
     
     if (!timerActive && isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
         console.log("Audio: Paused (timerActive is false in timer useEffect)");
     }
-
 
     return () => {
       clearInterval(intervalId);
@@ -372,7 +369,7 @@ export default function CrorepatiChallengePage() {
       toast({ title: "50:50 Used!", description: "Two incorrect options removed." });
     } else if (type === 'phoneAFriend' || type === 'askYourTeam') {
       setMainTimerWasActiveBeforeLifeline(timerActive); 
-      setTimerActive(false); 
+      setTimerActive(false); // This will pause audio via timer useEffect
       setIsLifelineDialogActive(true);
 
       if (type === 'phoneAFriend') {
@@ -401,13 +398,8 @@ export default function CrorepatiChallengePage() {
     setIsLifelineDialogActive(false);
 
     if (mainTimerWasActiveBeforeLifeline && currentQuestion && !answerRevealed && timeLeft > 0) {
-      if (isAudioInitialized && timerTickAudioRef.current) {
-          // No direct play here, timerActive change will handle it
-          // timerTickAudioRef.current.play().catch(error => {
-          //     console.error("Audio: Error playing audio after lifeline dialog close:", error);
-          // });
-           console.log("Audio: Should restart after lifeline (main timer was active)");
-      }
+      console.log("Audio: Main timer was active, should restart after lifeline dialog close.");
+      // No direct audio play here; setTimerActive(true) will trigger timer useEffect to handle audio.
       setTimerActive(true); 
     }
     setMainTimerWasActiveBeforeLifeline(false); 
@@ -452,6 +444,7 @@ export default function CrorepatiChallengePage() {
           setQuestions([]); 
           setCurrentQuestionIndex(0);
           setActiveTeamIndex(0);
+          // Other states like timerActive, timeLeft are reset by the main useEffect when phase becomes SETUP
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
