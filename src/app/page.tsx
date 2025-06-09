@@ -87,9 +87,9 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    // Reset prev refs for the new game starting
-    prevGamePhaseRef.current = 'SETUP'; // Simulate state before PLAYING
-    prevCurrentQuestionIndexRef.current = 0; // Or specific pre-game values
+    
+    prevGamePhaseRef.current = 'SETUP'; 
+    prevCurrentQuestionIndexRef.current = 0; 
     prevActiveTeamIndexRef.current = 0;
   }, []);
 
@@ -164,27 +164,23 @@ export default function CrorepatiChallengePage() {
     let isNewTurnInitialization = false;
 
     if (gamePhase === 'PLAYING') {
-      // Determine if it's a new turn initialization
       const gameJustStarted = prevGamePhaseRef.current !== 'PLAYING' && gamePhase === 'PLAYING';
-      // Handle undefined for the very first check after game starts
-      const questionChanged = prevCurrentQuestionIndexRef.current === undefined || prevCurrentQuestionIndexRef.current !== currentQuestionIndex;
-      const teamChanged = prevActiveTeamIndexRef.current === undefined || prevActiveTeamIndexRef.current !== activeTeamIndex;
+      const questionChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex;
+      const teamChanged = prevActiveTeamIndexRef.current !== activeTeamIndex;
 
-      // A new turn is when the game just started, or the question/team changed significantly from the last point these refs were set.
-      // For the very first question, after SETUP, prevGamePhaseRef.current might be 'SETUP' or undefined based on handleStartGame.
-      if (prevGamePhaseRef.current === undefined && gamePhase === 'PLAYING') { // First entry into PLAYING phase for this component lifecycle
+      if (gameJustStarted || questionChanged || teamChanged) {
         isNewTurnInitialization = true;
-      } else if (gameJustStarted) {
-        isNewTurnInitialization = true;
-      } else {
-        // If not gameJustStarted, check if question or team actually changed from *last turn's init point*
-        // This means prev refs should hold the values of the *previous turn that was initialized*
-        // The current logic: prev refs are updated at the end of this effect.
-        // So they hold values from the *previous execution of this effect*.
-        if (prevCurrentQuestionIndexRef.current !== currentQuestionIndex || prevActiveTeamIndexRef.current !== activeTeamIndex) {
-            isNewTurnInitialization = true;
-        }
+        // Update prev refs for the *next* "isNewTurnInitialization" check.
+        // These should reflect the state *at the beginning of this successfully initialized turn*.
+        prevGamePhaseRef.current = gamePhase; 
+        prevCurrentQuestionIndexRef.current = currentQuestionIndex;
+        prevActiveTeamIndexRef.current = activeTeamIndex;
       }
+    } else if (gamePhase === 'SETUP') {
+      // Reset refs if going back to setup, so the next game start is correctly identified
+      prevGamePhaseRef.current = undefined;
+      prevCurrentQuestionIndexRef.current = undefined;
+      prevActiveTeamIndexRef.current = undefined;
     }
 
 
@@ -208,11 +204,6 @@ export default function CrorepatiChallengePage() {
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && isLifelineDialogActive)) {
         if(timerActive) setTimerActive(false);
     }
-
-    // Update refs at the end of the effect for the next execution
-    prevGamePhaseRef.current = gamePhase;
-    prevCurrentQuestionIndexRef.current = currentQuestionIndex;
-    prevActiveTeamIndexRef.current = activeTeamIndex;
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
@@ -248,13 +239,11 @@ export default function CrorepatiChallengePage() {
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
 
-    // const nextTeamIndex = (activeTeamIndex + 1) % teams.length; // Original logic
     const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
 
-
     if (currentQuestionIndex + 1 < questions.length) {
-      setCurrentQuestionIndex(prev => prev + 1); // Always go to next question
-      setActiveTeamIndex(nextTeamIndex); // Cycle team
+      setCurrentQuestionIndex(prev => prev + 1); 
+      setActiveTeamIndex(nextTeamIndex);
     } else {
       setGamePhase('GAME_OVER');
       if (isAudioInitialized && timerTickAudioRef.current) {
@@ -263,7 +252,6 @@ export default function CrorepatiChallengePage() {
         timerTickAudioRef.current.load();
       }
     }
-
     setAnswerRevealed(false);
 
   }, [answerRevealed, gamePhase, activeTeamIndex, teams.length, currentQuestionIndex, questions.length, isAudioInitialized]);
