@@ -236,14 +236,13 @@ export default function CrorepatiChallengePage() {
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
 
-    const nextQuestionIndex = currentQuestionIndex + 1; // Move to next question for everyone
+    const nextQuestionIndex = currentQuestionIndex + 1; 
     
     if (nextQuestionIndex < questions.length) {
       setCurrentQuestionIndex(nextQuestionIndex); 
-      // Cycle through teams for the new question
       const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
       setActiveTeamIndex(nextTeamIndex);
-      setAnswerRevealed(false); // Reset for the new question
+      setAnswerRevealed(false); 
     } else {
       setGamePhase('GAME_OVER');
       if (isAudioInitialized && timerTickAudioRef.current) {
@@ -577,5 +576,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-
-    
