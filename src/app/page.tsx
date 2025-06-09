@@ -149,11 +149,12 @@ export default function CrorepatiChallengePage() {
         const isNewTurnInitialization = gameJustStarted || questionChanged || teamChanged;
 
         if (isNewTurnInitialization) {
-            setTimeLeft(currentQuestion.timeLimit);
             if (isAudioInitialized && timerTickAudioRef.current) {
                 timerTickAudioRef.current.pause(); 
-                timerTickAudioRef.current.currentTime = 0;
+                timerTickAudioRef.current.currentTime = 0; // Reset audio position
+                timerTickAudioRef.current.load(); // Force reload to ensure reset takes effect
             }
+            setTimeLeft(currentQuestion.timeLimit); // Reset timer duration
         }
       
         setSelectedAnswer(null);
@@ -182,16 +183,21 @@ export default function CrorepatiChallengePage() {
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
     teams.length, answerRevealed, isLifelineDialogActive, timerActive, 
-    currentQuestion?.timeLimit, isAudioInitialized, timeLeft
+    isAudioInitialized // Removed currentQuestion?.timeLimit (redundant) and timeLeft
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || (!timerActive && optionIndex !== null)) {
+      // If answer already revealed, or timer not active and it's a manual selection (not timeout)
       return;
     }
+    
+    // If it's a timeout (optionIndex is null), timerActive would be true until this point.
+    // If it's a manual selection, timerActive is true.
+    // We need to proceed to stop timer and reveal answer.
 
-    setTimerActive(false); 
+    setTimerActive(false); // Stop the timer immediately
 
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
@@ -224,6 +230,7 @@ export default function CrorepatiChallengePage() {
          if (isAudioInitialized && timerTickAudioRef.current) {
             timerTickAudioRef.current.pause();
             timerTickAudioRef.current.currentTime = 0;
+            timerTickAudioRef.current.load(); // Ensure reset for game over
         }
       }
     }
@@ -374,6 +381,7 @@ export default function CrorepatiChallengePage() {
           if (isAudioInitialized && timerTickAudioRef.current) {
             timerTickAudioRef.current.pause();
             timerTickAudioRef.current.currentTime = 0;
+            timerTickAudioRef.current.load(); // Ensure reset for new game
           }
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
