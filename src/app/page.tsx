@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PartyPopper, ChevronRight, TimerIcon } from 'lucide-react';
 
 const MAX_TEAMS = 6;
-const AI_VARIATION_CHANCE = 0; // Set to 0 to disable AI variation and prevent rate limit errors
+const AI_VARIATION_CHANCE = 0; 
 const LIFELINE_DIALOG_DURATION = 30;
 
 export default function CrorepatiChallengePage() {
@@ -59,9 +59,9 @@ export default function CrorepatiChallengePage() {
   const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
-  const prevGamePhaseRef = useRef<GamePhase>(gamePhase);
-  const prevCurrentQuestionIndexRef = useRef<number>(currentQuestionIndex);
-  const prevActiveTeamIndexRef = useRef<number>(activeTeamIndex);
+  const prevGamePhaseRef = useRef<GamePhase | undefined>(undefined);
+  const prevCurrentQuestionIndexRef = useRef<number | undefined>(undefined);
+  const prevActiveTeamIndexRef = useRef<number | undefined>(undefined);
 
 
   const handleStartGame = useCallback((teamNames: string[]) => {
@@ -87,6 +87,10 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
+    // Reset prev refs for the new game starting
+    prevGamePhaseRef.current = 'SETUP'; // Simulate state before PLAYING
+    prevCurrentQuestionIndexRef.current = 0; // Or specific pre-game values
+    prevActiveTeamIndexRef.current = 0;
   }, []);
 
   useEffect(() => {
@@ -157,13 +161,34 @@ export default function CrorepatiChallengePage() {
   }, [gamePhase, loadQuestions]);
   
   useEffect(() => {
+    let isNewTurnInitialization = false;
+
+    if (gamePhase === 'PLAYING') {
+      // Determine if it's a new turn initialization
+      const gameJustStarted = prevGamePhaseRef.current !== 'PLAYING' && gamePhase === 'PLAYING';
+      // Handle undefined for the very first check after game starts
+      const questionChanged = prevCurrentQuestionIndexRef.current === undefined || prevCurrentQuestionIndexRef.current !== currentQuestionIndex;
+      const teamChanged = prevActiveTeamIndexRef.current === undefined || prevActiveTeamIndexRef.current !== activeTeamIndex;
+
+      // A new turn is when the game just started, or the question/team changed significantly from the last point these refs were set.
+      // For the very first question, after SETUP, prevGamePhaseRef.current might be 'SETUP' or undefined based on handleStartGame.
+      if (prevGamePhaseRef.current === undefined && gamePhase === 'PLAYING') { // First entry into PLAYING phase for this component lifecycle
+        isNewTurnInitialization = true;
+      } else if (gameJustStarted) {
+        isNewTurnInitialization = true;
+      } else {
+        // If not gameJustStarted, check if question or team actually changed from *last turn's init point*
+        // This means prev refs should hold the values of the *previous turn that was initialized*
+        // The current logic: prev refs are updated at the end of this effect.
+        // So they hold values from the *previous execution of this effect*.
+        if (prevCurrentQuestionIndexRef.current !== currentQuestionIndex || prevActiveTeamIndexRef.current !== activeTeamIndex) {
+            isNewTurnInitialization = true;
+        }
+      }
+    }
+
+
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && !answerRevealed && !isLifelineDialogActive) {
-        const gameJustStarted = prevGamePhaseRef.current !== 'PLAYING' && gamePhase === 'PLAYING';
-        const questionChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex;
-        const teamChanged = prevActiveTeamIndexRef.current !== activeTeamIndex;
-
-        const isNewTurnInitialization = gameJustStarted || questionChanged || teamChanged;
-
         if (isNewTurnInitialization) {
             if (isAudioInitialized && timerTickAudioRef.current) {
                 timerTickAudioRef.current.pause(); 
@@ -171,30 +196,24 @@ export default function CrorepatiChallengePage() {
                 timerTickAudioRef.current.load(); 
             }
             setTimeLeft(currentQuestion.timeLimit); 
+            setSelectedAnswer(null);
+            setAnswerRevealed(false); 
+            setFiftyFiftyUsedThisTurn(false);
+            setFiftyFiftyOptions(null);
         }
       
-        setSelectedAnswer(null);
-        setAnswerRevealed(false); 
-        setFiftyFiftyUsedThisTurn(false);
-        setFiftyFiftyOptions(null);
-        
         if (!timerActive && (isNewTurnInitialization || timeLeft > 0)) { 
             setTimerActive(true); 
         }
-        
-        if (isNewTurnInitialization) {
-            prevGamePhaseRef.current = gamePhase;
-            prevCurrentQuestionIndexRef.current = currentQuestionIndex;
-            prevActiveTeamIndexRef.current = activeTeamIndex;
-        }
-
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && isLifelineDialogActive)) { 
         if(timerActive) setTimerActive(false);
-    } else if (gamePhase === 'SETUP') {
-        prevGamePhaseRef.current = 'SETUP';
-        prevCurrentQuestionIndexRef.current = 0;
-        prevActiveTeamIndexRef.current = 0;
     }
+
+    // Update refs at the end of the effect for the next execution
+    prevGamePhaseRef.current = gamePhase;
+    prevCurrentQuestionIndexRef.current = currentQuestionIndex;
+    prevActiveTeamIndexRef.current = activeTeamIndex;
+
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
     teams.length, answerRevealed, isLifelineDialogActive, timerActive, 
@@ -230,11 +249,10 @@ export default function CrorepatiChallengePage() {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
 
     const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
-    setActiveTeamIndex(nextTeamIndex);
-
-    // Advance to the next question for the next team, or end game if out of questions
+    
     if (currentQuestionIndex + 1 < questions.length) {
       setCurrentQuestionIndex(prev => prev + 1);
+      setActiveTeamIndex(nextTeamIndex); // Cycle team if moving to next question
     } else {
       setGamePhase('GAME_OVER');
       if (isAudioInitialized && timerTickAudioRef.current) {
