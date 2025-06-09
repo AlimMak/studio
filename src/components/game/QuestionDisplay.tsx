@@ -9,7 +9,7 @@ interface QuestionDisplayProps {
   onAnswerSelect: (optionIndex: number) => void;
   selectedAnswer: number | null;
   revealAnswer: boolean;
-  disabledOptions?: number[]; // Indices of options disabled by 50:50
+  disabledOptions?: number[];
   isAnswerDisabled: boolean;
 }
 
@@ -22,12 +22,12 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   isAnswerDisabled,
 }) => {
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full shadow-xl border-2 border-primary/50 bg-card">
       <CardHeader className="text-center pb-4">
         <CardTitle className="text-2xl md:text-3xl font-headline text-primary flex items-center justify-center gap-2">
            <HelpCircle className="w-8 h-8 text-accent" /> Question for ${question.moneyValue.toLocaleString()}
         </CardTitle>
-        <CardDescription className="text-lg md:text-xl mt-2 px-4 py-6 bg-primary/5 rounded-lg shadow-inner text-foreground">
+        <CardDescription className="text-lg md:text-xl mt-2 px-4 py-6 bg-primary/10 rounded-lg shadow-inner text-foreground min-h-[100px] flex items-center justify-center">
           {question.text}
         </CardDescription>
       </CardHeader>

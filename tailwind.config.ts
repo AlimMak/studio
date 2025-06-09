@@ -11,7 +11,7 @@ export default {
     extend: {
       fontFamily: {
         body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
+        headline: ['Inter', 'sans-serif'], // Consider a more KBC-like font if available
         code: ['monospace'],
       },
       colors: {
@@ -48,6 +48,14 @@ export default {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        success: { // Added for theme consistency
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: { // Added for theme consistency
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+        },
         chart: {
           '1': 'hsl(var(--chart-1))',
           '2': 'hsl(var(--chart-2))',
@@ -88,20 +96,30 @@ export default {
             height: '0',
           },
         },
-        pulseCorrect: {
-          '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 hsl(var(--accent) / 0.7)' },
-          '50%': { transform: 'scale(1.05)', boxShadow: '0 0 0 10px hsl(var(--accent) / 0)' },
+        pulseCorrect: { // KBC style: often a glow or highlight
+          '0%, 100%': { opacity: '1', boxShadow: '0 0 5px hsl(var(--success))' },
+          '50%': { opacity: '0.7', boxShadow: '0 0 15px 5px hsl(var(--success) / 0.5)' },
         },
-        pulseIncorrect: {
-          '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 hsl(var(--destructive) / 0.7)' },
-          '50%': { transform: 'scale(1.05)', boxShadow: '0 0 0 10px hsl(var(--destructive) / 0)' },
+        pulseIncorrect: { // KBC style: often a red glow or highlight
+          '0%, 100%': { opacity: '1', boxShadow: '0 0 5px hsl(var(--destructive))' },
+          '50%': { opacity: '0.7', boxShadow: '0 0 15px 5px hsl(var(--destructive) / 0.5)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInSlow: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'pulse-correct': 'pulseCorrect 1.5s ease-out',
-        'pulse-incorrect': 'pulseIncorrect 1.5s ease-out',
+        'pulse-correct': 'pulseCorrect 1.5s ease-in-out',
+        'pulse-incorrect': 'pulseIncorrect 1.5s ease-in-out',
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'fade-in-slow': 'fadeInSlow 0.8s ease-out forwards',
       },
     },
   },
