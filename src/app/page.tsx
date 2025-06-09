@@ -118,7 +118,8 @@ export default function CrorepatiChallengePage() {
       if (audio) {
         audio.removeEventListener('canplaythrough', onCanPlayThrough);
         audio.removeEventListener('error', onError);
-        audio.pause(); 
+        audio.pause();
+        audio.currentTime = 0; // Reset on unmount
       }
       timerTickAudioRef.current = null; 
       setIsAudioInitialized(false); 
@@ -156,7 +157,7 @@ export default function CrorepatiChallengePage() {
       setTimerActive(true);
       setSelectedAnswer(null);
     }
-  }, [gamePhase, currentQuestion, timerActive, answerRevealed]); // Removed fiftyFiftyUsed, fiftyFiftyOptions from deps
+  }, [gamePhase, currentQuestion, timerActive, answerRevealed]);
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || !timerActive) return;
@@ -209,21 +210,24 @@ export default function CrorepatiChallengePage() {
         }
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
-    } else if (timerActive && timeLeft === 0) {
+    } else if (timerActive && timeLeft === 0) { // Timer ran out
       if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.pause(); 
+        timerTickAudioRef.current.pause();
+        timerTickAudioRef.current.currentTime = 0; 
       }
       handleAnswerSelect(null); 
-    } else if (!timerActive) {
+    } else if (!timerActive) { // Timer stopped for other reasons
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.pause(); 
+        timerTickAudioRef.current.currentTime = 0;
       }
     }
   
     return () => {
       clearInterval(intervalId);
-      if (timerTickAudioRef.current && !timerActive) { // Ensure pause only if it was supposed to be paused
+      if (timerTickAudioRef.current) {
           timerTickAudioRef.current.pause();
+          timerTickAudioRef.current.currentTime = 0;
       }
     };
   }, [timerActive, timeLeft, isAudioInitialized, handleAnswerSelect]);
@@ -411,3 +415,5 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
+
+    
