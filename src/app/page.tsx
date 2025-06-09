@@ -148,7 +148,7 @@ export default function CrorepatiChallengePage() {
       setSelectedAnswer(null);
       // fiftyFiftyUsed and fiftyFiftyOptions are reset per question in handleAnswerSelect's timeout
     }
-  }, [gamePhase, currentQuestion, timerActive, answerRevealed]); // Removed currentQuestion.timeLimit as currentQuestion covers it
+  }, [gamePhase, currentQuestion, timerActive, answerRevealed]);
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
     if (answerRevealed || !timerActive) return;
@@ -157,7 +157,7 @@ export default function CrorepatiChallengePage() {
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
 
-    const isCorrect = optionIndex === currentQuestion.correctAnswerIndex;
+    const isCorrect = currentQuestion && optionIndex === currentQuestion.correctAnswerIndex;
     
     setTimeout(() => {
       if (isCorrect) {
@@ -172,8 +172,8 @@ export default function CrorepatiChallengePage() {
       setTimeout(() => {
         setAnswerRevealed(false);
         setSelectedAnswer(null);
-        setFiftyFiftyUsed(false); // Reset 50:50 for the next question/turn
-        setFiftyFiftyOptions(null); // Reset 50:50 options
+        setFiftyFiftyUsed(false); 
+        setFiftyFiftyOptions(null); 
 
         const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
         setActiveTeamIndex(nextTeamIndex);
@@ -185,7 +185,6 @@ export default function CrorepatiChallengePage() {
             setGamePhase('GAME_OVER');
           }
         }
-        // Timer will be set to active by the other useEffect listening to currentQuestion changes
       }, 2000); 
     }, 1500);
   }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, activeTeamIndex, teams, currentQuestionIndex, questions, gamePhase, setGamePhase, setTeams, setActiveTeamIndex, setCurrentQuestionIndex]);
@@ -215,7 +214,6 @@ export default function CrorepatiChallengePage() {
   
     return () => {
       clearInterval(intervalId);
-      // Ensure sound is paused when effect cleans up or timerActive/timeLeft changes cause re-run
       if (timerTickAudioRef.current && !timerActive) {
           timerTickAudioRef.current.pause();
       }
@@ -224,7 +222,7 @@ export default function CrorepatiChallengePage() {
 
 
   const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'audiencePoll') => {
-    if (!activeTeam || disabledLifeline(type)) return;
+    if (!activeTeam || !currentQuestion || disabledLifeline(type)) return;
 
     const newTeams = teams.map(t => {
       if (t.id === activeTeam.id) {
@@ -243,7 +241,7 @@ export default function CrorepatiChallengePage() {
       
       const optionsToHide: number[] = [];
       const numToHide = Math.min(2, incorrectOptions.length); 
-      while(optionsToHide.length < numToHide && incorrectOptions.length > 0) { // Added incorrectOptions.length > 0 check
+      while(optionsToHide.length < numToHide && incorrectOptions.length > 0) { 
           const randomIndex = Math.floor(Math.random() * incorrectOptions.length);
           const optionToHide = incorrectOptions.splice(randomIndex, 1)[0]; 
           optionsToHide.push(optionToHide);
@@ -260,7 +258,7 @@ export default function CrorepatiChallengePage() {
       }));
       let remainingPercentage = 100;
       
-      if (currentQuestion.options.length > 0) { // Ensure options exist
+      if (currentQuestion.options.length > 0) { 
         pollResults[currentQuestion.correctAnswerIndex].percentage = Math.floor(Math.random() * 41) + 30; 
         remainingPercentage -= pollResults[currentQuestion.correctAnswerIndex].percentage;
 
@@ -269,7 +267,7 @@ export default function CrorepatiChallengePage() {
             if (arrIdx === otherOptionIndices.length -1) { 
                 pollResults[optIndex].percentage = remainingPercentage;
             } else {
-                const randomShare = Math.floor(Math.random() * (remainingPercentage / (otherOptionIndices.length - arrIdx || 1))); // Avoid division by zero
+                const randomShare = Math.floor(Math.random() * (remainingPercentage / (otherOptionIndices.length - arrIdx || 1))); 
                 pollResults[optIndex].percentage = randomShare;
                 remainingPercentage -= randomShare;
             }
@@ -278,13 +276,13 @@ export default function CrorepatiChallengePage() {
         let currentSum = pollResults.reduce((sum, item) => sum + item.percentage, 0);
         if (currentSum !== 100 && pollResults.length > 0) {
             const diff = 100 - currentSum;
-            const targetIdx = pollResults.findIndex(p => p.optionIndex !== currentQuestion.correctAnswerIndex && p.percentage + diff >= 0); // Ensure percentage doesn't go negative
+            const targetIdx = pollResults.findIndex(p => p.optionIndex !== currentQuestion.correctAnswerIndex && p.percentage + diff >= 0); 
             if (targetIdx !== -1) {
               pollResults[targetIdx].percentage += diff;
             } else { 
               const fallbackIdx = pollResults.findIndex(p => p.percentage + diff >=0);
               if (fallbackIdx !== -1) pollResults[fallbackIdx].percentage += diff;
-              else if (pollResults.length > 0) pollResults[0].percentage += diff; // Last resort, might make one option very dominant
+              else if (pollResults.length > 0) pollResults[0].percentage += diff; 
             }
         }
       }
@@ -405,4 +403,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-
