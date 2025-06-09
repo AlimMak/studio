@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PartyPopper, ChevronRight, TimerIcon } from 'lucide-react';
 
 const MAX_TEAMS = 6;
-const AI_VARIATION_CHANCE = 0.3; // 30% chance to vary a question
+const AI_VARIATION_CHANCE = 0; // Set to 0 to disable AI variation and prevent rate limit errors
 const LIFELINE_DIALOG_DURATION = 30;
 
 export default function CrorepatiChallengePage() {
@@ -123,22 +123,32 @@ export default function CrorepatiChallengePage() {
 
   const loadQuestions = useCallback(async () => {
     const baseQuestions = getQuestions();
-    const variedQuestions = await Promise.all(
-      baseQuestions.map(async (q) => {
-        if (Math.random() < AI_VARIATION_CHANCE) {
-          try {
-            const variation = await generateQuestionVariation({ question: q.text });
-            return { ...q, text: variation.variedQuestion, originalText: q.text };
-          } catch (error) {
-            console.error("Failed to vary question:", error);
-            return q; 
+    if (AI_VARIATION_CHANCE > 0) {
+      const variedQuestions = await Promise.all(
+        baseQuestions.map(async (q) => {
+          if (Math.random() < AI_VARIATION_CHANCE) {
+            try {
+              const variation = await generateQuestionVariation({ question: q.text });
+              return { ...q, text: variation.variedQuestion, originalText: q.text };
+            } catch (error) {
+              console.error("Failed to vary question:", error);
+              toast({
+                title: "AI Question Error",
+                description: "Could not vary a question. Using original.",
+                variant: "destructive",
+                duration: 3000,
+              });
+              return q; 
+            }
           }
-        }
-        return q;
-      })
-    );
-    setQuestions(variedQuestions);
-  }, []);
+          return q;
+        })
+      );
+      setQuestions(variedQuestions);
+    } else {
+      setQuestions(baseQuestions);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (gamePhase === 'PLAYING') {
@@ -168,8 +178,6 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
         
-        //setShowPhoneAFriend(false); // This should be managed by dialog interaction
-
         if (!timerActive && (isNewTurnInitialization || timeLeft > 0)) { 
             setTimerActive(true); 
         }
@@ -190,12 +198,12 @@ export default function CrorepatiChallengePage() {
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
     teams.length, answerRevealed, isLifelineDialogActive, timerActive, 
-    isAudioInitialized
+    isAudioInitialized, timeLeft // Added timeLeft here to re-evaluate if timer should be active when dialogs close
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || (!timerActive && optionIndex !== null)) {
+    if (answerRevealed || (!timerActive && optionIndex !== null) ) { // Allow processing if timerActive is false due to timeout (optionIndex is null)
       return;
     }
     
@@ -364,7 +372,6 @@ export default function CrorepatiChallengePage() {
   
   const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => {
       if(!activeTeam) return true;
-      // Allow current active dialog's lifeline type to be "active" visually in dialog, but not clickable again from main screen
       if (isLifelineDialogActive && ((showTeamPoll && type !== 'askYourTeam') || (showPhoneAFriend && type !== 'phoneAFriend'))) return true; 
       return !activeTeam.lifelines[type] || answerRevealed || !timerActive || (type === 'fiftyFifty' && fiftyFiftyUsedThisTurn);
   }
