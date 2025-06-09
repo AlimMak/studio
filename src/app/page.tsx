@@ -16,7 +16,7 @@ import GameLogo from '@/components/game/GameLogo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PartyPopper } from 'lucide-react';
+import { PartyPopper, ChevronRight } from 'lucide-react';
 
 const MAX_TEAMS = 6;
 const AI_VARIATION_CHANCE = 0.3; // 30% chance to vary a question
@@ -138,7 +138,7 @@ export default function CrorepatiChallengePage() {
   }, [gamePhase, loadQuestions]);
   
   useEffect(() => {
-    if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0) { 
+    if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && !answerRevealed) { 
       setTimeLeft(currentQuestion.timeLimit);
       setSelectedAnswer(null);
       setAnswerRevealed(false); 
@@ -160,7 +160,7 @@ export default function CrorepatiChallengePage() {
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gamePhase, currentQuestion, activeTeamIndex, isAudioInitialized, teams.length]);
+  }, [gamePhase, currentQuestion, activeTeamIndex, isAudioInitialized, teams.length, answerRevealed]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
@@ -186,20 +186,7 @@ export default function CrorepatiChallengePage() {
       } else {
          toast({ title: "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
       }
-      
-      setTimeout(() => {
-        // States like answerRevealed, selectedAnswer, fiftyFifty are reset by the question start useEffect
-        const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
-        setActiveTeamIndex(nextTeamIndex);
-
-        if (nextTeamIndex === 0) { 
-          if (currentQuestionIndex + 1 < questions.length) {
-            setCurrentQuestionIndex(prev => prev + 1);
-          } else {
-            setGamePhase('GAME_OVER');
-          }
-        }
-      }, 2000); 
+      // Game will now pause here until "Continue" button is pressed.
     }, 1500);
   }, [
     answerRevealed, 
@@ -207,18 +194,35 @@ export default function CrorepatiChallengePage() {
     currentQuestion, 
     activeTeam, 
     toast, 
-    activeTeamIndex, 
-    teams, 
-    currentQuestionIndex, 
-    questions, 
-    // gamePhase, // gamePhase might cause issues if included here, as it changes.
-    // setGamePhase, // Same for setGamePhase
-    // setTeams, // Not stable
-    // setActiveTeamIndex, // Not stable
-    // setCurrentQuestionIndex, // Not stable
-    isAudioInitialized // Added to dependencies
+    isAudioInitialized,
+    // Removed dependencies that were for auto-advancement
+    // activeTeamIndex, teams, currentQuestionIndex, questions, setGamePhase, setActiveTeamIndex, setCurrentQuestionIndex
   ]);
   
+  const proceedToNextTurnOrQuestion = useCallback(() => {
+    if (!answerRevealed || gamePhase !== 'PLAYING') return;
+
+    const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
+    setActiveTeamIndex(nextTeamIndex);
+
+    if (nextTeamIndex === 0) { // A full round of teams has answered this question
+      if (currentQuestionIndex + 1 < questions.length) {
+        setCurrentQuestionIndex(prev => prev + 1);
+      } else {
+        setGamePhase('GAME_OVER');
+         if (isAudioInitialized && timerTickAudioRef.current) {
+            timerTickAudioRef.current.pause();
+            timerTickAudioRef.current.currentTime = 0;
+        }
+      }
+    }
+    // The useEffect listening to activeTeamIndex/currentQuestionIndex will reset other states
+    // like selectedAnswer, answerRevealed, fiftyFiftyOptions, etc.
+    // Forcing answerRevealed to false here ensures the effect will run correctly.
+    setAnswerRevealed(false); 
+
+  }, [answerRevealed, gamePhase, activeTeamIndex, teams, currentQuestionIndex, questions.length, setGamePhase, setActiveTeamIndex, setCurrentQuestionIndex, isAudioInitialized]);
+
 
   // Effect for timer countdown
   useEffect(() => {
@@ -229,12 +233,11 @@ export default function CrorepatiChallengePage() {
         setTimeLeft((prevTime) => prevTime - 1); 
       }, 1000);
     } else if (timerActive && timeLeft === 0) { 
-      handleAnswerSelect(null); // This will also stop audio
+      handleAnswerSelect(null); 
     }
   
     return () => {
       clearInterval(intervalId); 
-      // Audio stop is handled by handleAnswerSelect or new question setup
     };
   }, [timerActive, timeLeft, handleAnswerSelect]); 
 
@@ -392,6 +395,13 @@ export default function CrorepatiChallengePage() {
             disabledOptions={fiftyFiftyOptions || []} 
             isAnswerDisabled={answerRevealed || !timerActive}
           />}
+          {answerRevealed && gamePhase === 'PLAYING' && (
+            <div className="flex justify-center mt-4">
+              <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+                Continue <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
