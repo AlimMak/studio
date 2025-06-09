@@ -59,6 +59,7 @@ export default function CrorepatiChallengePage() {
   const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
+  // Refs to store previous state for change detection in useEffect
   const prevGamePhaseRef = useRef<GamePhase | undefined>();
   const prevCurrentQuestionIndexRef = useRef<number | undefined>();
   const prevActiveTeamIndexRef = useRef<number | undefined>();
@@ -76,6 +77,12 @@ export default function CrorepatiChallengePage() {
     setActiveTeamIndex(0);
     setGamePhase('PLAYING');
     
+    // Explicitly set previous refs to undefined to ensure new turn initialization
+    prevGamePhaseRef.current = 'SETUP'; // Mark that we are coming from setup
+    prevCurrentQuestionIndexRef.current = undefined;
+    prevActiveTeamIndexRef.current = undefined;
+
+    // Reset all relevant game states
     setAnswerRevealed(false);
     setSelectedAnswer(null);
     setFiftyFiftyUsedThisTurn(false);
@@ -88,51 +95,24 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    
     setTimerActive(false); 
     setTimeLeft(0);
-
-    prevGamePhaseRef.current = 'SETUP'; 
-    prevCurrentQuestionIndexRef.current = undefined; 
-    prevActiveTeamIndexRef.current = undefined;
   }, []);
 
   useEffect(() => {
-    console.log("Audio: Initializing audio element setup...");
     const audio = new Audio('/sounds/timer-tick.mp3');
-    audio.preload = 'auto';
     audio.loop = true;
-
-    const onCanPlayThrough = () => {
-      if (audio) {
-        timerTickAudioRef.current = audio;
-        setIsAudioInitialized(true);
-        console.log("Audio: Ready and initialized (onCanPlayThrough).");
-      }
-    };
-
-    const onError = (e: Event) => {
-      console.error("Audio: Loading error:", e);
-      toast({ title: "Audio Error", description: "Could not load timer sound.", variant: "destructive", duration: 3000 });
-      setIsAudioInitialized(false); 
-    };
-    
-    audio.addEventListener('canplaythrough', onCanPlayThrough);
-    audio.addEventListener('error', onError);
-    audio.load(); // Explicitly call load
+    timerTickAudioRef.current = audio;
+    setIsAudioInitialized(true); // Assume initialized, handle errors if play fails
 
     return () => {
-      console.log("Audio: Cleaning up audio element...");
       if (timerTickAudioRef.current) {
         timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.removeEventListener('canplaythrough', onCanPlayThrough);
-        timerTickAudioRef.current.removeEventListener('error', onError);
-        timerTickAudioRef.current.src = ''; // Release resources
+        timerTickAudioRef.current = null;
       }
-      timerTickAudioRef.current = null;
       setIsAudioInitialized(false);
     };
-  }, [toast]);
+  }, []);
 
   const loadQuestions = useCallback(async () => {
     const baseQuestions = getQuestions();
@@ -164,59 +144,66 @@ export default function CrorepatiChallengePage() {
   }, [toast]);
 
   useEffect(() => {
-    if (gamePhase === 'PLAYING') {
+    if (gamePhase === 'PLAYING' && questions.length === 0) {
       loadQuestions();
     }
-  }, [gamePhase, loadQuestions]);
+  }, [gamePhase, questions.length, loadQuestions]);
+
 
   useEffect(() => {
     let isNewTurnInitialization = false;
 
-    if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0) {
+    if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && activeTeam) {
         const gameJustStarted = prevGamePhaseRef.current === 'SETUP' && gamePhase === 'PLAYING';
-        const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex;
-        const activeTeamIndexChanged = prevActiveTeamIndexRef.current !== activeTeamIndex;
+        // Check if question index changed OR active team index changed
+        // OR if currentQuestion was previously undefined (meaning questions just loaded)
+        const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex && prevCurrentQuestionIndexRef.current !== undefined;
+        const activeTeamIndexChanged = prevActiveTeamIndexRef.current !== activeTeamIndex && prevActiveTeamIndexRef.current !== undefined;
+        const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0;
 
-        if (gameJustStarted || questionIndexChanged || activeTeamIndexChanged) {
-            isNewTurnInitialization = true;
+
+        if (gameJustStarted || questionIndexChanged || activeTeamIndexChanged || questionsJustLoaded) {
+            // More robust check: only initialize if the actual question or team has changed
+            // or if the game just moved from SETUP to PLAYING with the first question.
+           if ( (prevCurrentQuestionIndexRef.current !== currentQuestionIndex ||
+                 prevActiveTeamIndexRef.current !== activeTeamIndex ||
+                 gameJustStarted) || 
+                 (questionsJustLoaded && prevGamePhaseRef.current === 'SETUP') // Ensure this only on very first load
+            ) {
+               isNewTurnInitialization = true;
+            }
         }
     }
-
-    if (isNewTurnInitialization && currentQuestion && activeTeam) {
-        console.log("New turn initialization for Q:", currentQuestion.id, "Team:", activeTeam.name);
-
-        // Explicitly pause any audio that might be playing from a previous turn
-        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-            console.log("Audio: Pausing audio from previous turn before new turn setup.");
-            timerTickAudioRef.current.pause();
-        }
+    
+    if (isNewTurnInitialization) {
+        console.log("New turn initialization for Q:", currentQuestion.id, "Team:", activeTeam?.name);
         
         setTimeLeft(currentQuestion.timeLimit);
         setSelectedAnswer(null);
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
-        setAnswerRevealed(false); // Ensure answer is not revealed for the new question
+        setAnswerRevealed(false); 
 
         if (currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
             if (isAudioInitialized && timerTickAudioRef.current) {
                 timerTickAudioRef.current.currentTime = 0;
-                console.log("Audio: Attempting to play audio for new turn:", currentQuestion.id);
                 timerTickAudioRef.current.play().catch(error => {
-                    console.error("Audio: Error playing timer sound on new turn:", currentQuestion.id, error);
+                    console.error("Error playing timer sound on new turn:", error);
                     if (error.name === 'NotAllowedError') {
-                        toast({ title: "Audio Playback Issue", description: "Browser prevented audio. Click to interact.", variant: "destructive", duration: 4000 });
+                         toast({ title: "Audio Playback Issue", description: "Browser prevented audio. Click to interact.", variant: "destructive", duration: 4000 });
                     }
                 });
-            } else {
-                console.warn("Audio: Not ready on new turn for question:", currentQuestion.id, "isAudioInitialized:", isAudioInitialized);
             }
             setTimerActive(true);
-        } else { // No time limit for this question or lifeline dialog is active
+        } else { 
             setTimerActive(false);
+             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+                timerTickAudioRef.current.pause();
+            }
         }
     } else if (gamePhase === 'SETUP') {
         // Full reset for SETUP phase
-        if (timerActive) setTimerActive(false); // This will trigger audio pause in timer useEffect
+        setTimerActive(false);
         setTimeLeft(0);
         setAnswerRevealed(false);
         setSelectedAnswer(null);
@@ -230,22 +217,25 @@ export default function CrorepatiChallengePage() {
         setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
         setPhoneAFriendLifelineTimerActive(false);
         setMainTimerWasActiveBeforeLifeline(false);
+        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+            timerTickAudioRef.current.pause();
+        }
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) {
-            console.log("Game over or answer revealed or lifeline active, ensuring timer is off.");
-            setTimerActive(false);
+            setTimerActive(false); // This should also pause audio via the timer useEffect
         }
     }
     
-    // Update prev refs *after* checking for initialization to correctly reflect the *previous completed* state
-    prevGamePhaseRef.current = gamePhase;
-    prevCurrentQuestionIndexRef.current = currentQuestionIndex;
-    prevActiveTeamIndexRef.current = activeTeamIndex;
+    // Update previous state refs *after* checks, and only if a valid turn was processed or phase changed
+    if (isNewTurnInitialization || gamePhase !== prevGamePhaseRef.current) {
+        prevGamePhaseRef.current = gamePhase;
+        prevCurrentQuestionIndexRef.current = currentQuestionIndex;
+        prevActiveTeamIndexRef.current = activeTeamIndex;
+    }
 
   }, [
-    gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex,
-    teams.length, isLifelineDialogActive, 
-    isAudioInitialized, toast, activeTeam?.name, answerRevealed // answerRevealed added
+    gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
+    isLifelineDialogActive, isAudioInitialized, toast, activeTeam, answerRevealed, loadQuestions
   ]);
 
 
@@ -253,7 +243,6 @@ export default function CrorepatiChallengePage() {
     if (answerRevealed || (!timerActive && optionIndex !== null && currentQuestion && timeLeft > 0 && currentQuestion.timeLimit > 0) ) {
       return;
     }
-    console.log("Answer selected:", optionIndex, "Current TimeLeft:", timeLeft);
     setTimerActive(false); 
     setSelectedAnswer(optionIndex);
     setAnswerRevealed(true);
@@ -274,23 +263,18 @@ export default function CrorepatiChallengePage() {
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
-    console.log("Proceeding to next turn/question.");
 
     const nextQuestionIndexToUse = currentQuestionIndex + 1;
     
     if (nextQuestionIndexToUse < questions.length) {
       setCurrentQuestionIndex(nextQuestionIndexToUse); 
-      // Active team index remains the same, as per new requirement: each team gets a new question
+      // Active team index remains the same for now, each team gets a new question
       // const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
       // setActiveTeamIndex(nextTeamIndex);
-      setAnswerRevealed(false); 
-      // fiftyFiftyUsedThisTurn is reset by new turn initialization effect
+      setAnswerRevealed(false); // This will be reset by new turn initialization effect too
     } else {
-      console.log("Game over: no more questions.");
       setGamePhase('GAME_OVER');
-      // Ensure audio stops on game over
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing audio on game over.");
         timerTickAudioRef.current.pause();
         timerTickAudioRef.current.currentTime = 0;
       }
@@ -305,25 +289,20 @@ export default function CrorepatiChallengePage() {
       intervalId = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
-    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed) { 
-      console.log("Timer useEffect detected timeLeft === 0, auto-submitting.");
+    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0) { 
       handleAnswerSelect(null); 
-    } else { 
-      clearInterval(intervalId);
-      if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing audio in timer useEffect: timerActive=", timerActive, "timeLeft=", timeLeft, "isLifelineDialogActive=", isLifelineDialogActive, "answerRevealed=", answerRevealed);
-        timerTickAudioRef.current.pause();
-      }
     }
+    
+    // Audio pause logic based on timerActive
+    if (!timerActive && isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        timerTickAudioRef.current.pause();
+    }
+
 
     return () => {
       clearInterval(intervalId);
-      if (timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing audio in timer useEffect cleanup (e.g. timerActive became false).");
-        timerTickAudioRef.current.pause();
-      }
     };
-  }, [timerActive, timeLeft, isLifelineDialogActive, isAudioInitialized, answerRevealed, handleAnswerSelect]);
+  }, [timerActive, timeLeft, isLifelineDialogActive, isAudioInitialized, answerRevealed, handleAnswerSelect, currentQuestion]);
 
   useEffect(() => {
     let lifelineIntervalId: NodeJS.Timeout | undefined;
@@ -333,8 +312,6 @@ export default function CrorepatiChallengePage() {
       }, 1000);
     } else if (askTeamLifelineTimerActive && askTeamLifelineTimer === 0) {
       setAskTeamLifelineTimerActive(false);
-      // Optional: Auto-close dialog or notify user
-      // closeLifelineDialog('askYourTeam'); 
     }
     return () => clearInterval(lifelineIntervalId);
   }, [askTeamLifelineTimerActive, askTeamLifelineTimer]);
@@ -347,8 +324,6 @@ export default function CrorepatiChallengePage() {
       }, 1000);
     } else if (phoneAFriendLifelineTimerActive && phoneAFriendLifelineTimer === 0) {
       setPhoneAFriendLifelineTimerActive(false);
-      // Optional: Auto-close dialog or notify user
-      // closeLifelineDialog('phoneAFriend');
     }
     return () => clearInterval(lifelineIntervalId);
   }, [phoneAFriendLifelineTimerActive, phoneAFriendLifelineTimer]);
@@ -356,7 +331,6 @@ export default function CrorepatiChallengePage() {
 
   const handleUseLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam') => {
     if (!activeTeam || !currentQuestion || disabledLifeline(type)) return;
-    console.log("Using lifeline:", type);
 
     const newTeams = teams.map(t => {
       if (t.id === activeTeam.id) {
@@ -367,7 +341,7 @@ export default function CrorepatiChallengePage() {
     setTeams(newTeams);
 
     if (type === 'fiftyFifty') {
-      setFiftyFiftyUsedThisTurn(true); // This ensures it's only used once per question turn
+      setFiftyFiftyUsedThisTurn(true); 
       const correctAnswer = currentQuestion.correctAnswerIndex;
       const incorrectOptions = currentQuestion.options
         .map((_, i) => i)
@@ -384,7 +358,7 @@ export default function CrorepatiChallengePage() {
       setFiftyFiftyOptions(optionsToHide);
       toast({ title: "50:50 Used!", description: "Two incorrect options removed." });
     } else if (type === 'phoneAFriend' || type === 'askYourTeam') {
-      setMainTimerWasActiveBeforeLifeline(timerActive); // Store if main timer was running
+      setMainTimerWasActiveBeforeLifeline(timerActive); 
       setTimerActive(false); // This will pause main timer and audio via the timer useEffect
       setIsLifelineDialogActive(true);
 
@@ -393,7 +367,7 @@ export default function CrorepatiChallengePage() {
         setPhoneAFriendLifelineTimerActive(false); 
         setShowPhoneAFriend(true);
         toast({ title: "Phone a Friend Used!", description: "Dialog open. Start the timer when ready." });
-      } else { // askYourTeam
+      } else { 
         setAskTeamLifelineTimer(LIFELINE_DIALOG_DURATION);
         setAskTeamLifelineTimerActive(false); 
         setShowTeamPoll(true);
@@ -403,11 +377,10 @@ export default function CrorepatiChallengePage() {
   };
 
   const closeLifelineDialog = (type: 'askYourTeam' | 'phoneAFriend') => {
-    console.log("Closing lifeline dialog:", type);
     if (type === 'askYourTeam') {
       setShowTeamPoll(false);
       setAskTeamLifelineTimerActive(false); 
-    } else { // phoneAFriend
+    } else { 
       setShowPhoneAFriend(false);
       setPhoneAFriendLifelineTimerActive(false); 
     }
@@ -415,17 +388,12 @@ export default function CrorepatiChallengePage() {
     setIsLifelineDialogActive(false);
 
     if (mainTimerWasActiveBeforeLifeline && currentQuestion && !answerRevealed && timeLeft > 0) {
-      console.log("Audio: Resuming main timer after lifeline. timeLeft:", timeLeft);
       if (isAudioInitialized && timerTickAudioRef.current) {
-          // timerTickAudioRef.current.currentTime = 0; // Optionally reset audio time
-          console.log("Audio: Attempting to play audio after lifeline dialog close for question:", currentQuestion.id);
           timerTickAudioRef.current.play().catch(error => {
-              console.error("Audio: Error playing audio after lifeline dialog close:", error);
+              console.error("Error playing audio after lifeline dialog close:", error);
           });
-      } else {
-          console.warn("Audio: Not ready after lifeline for question:", currentQuestion.id, "isAudioInitialized:", isAudioInitialized);
       }
-      setTimerActive(true); // Resume timer
+      setTimerActive(true); 
     }
     setMainTimerWasActiveBeforeLifeline(false); 
   };
@@ -434,15 +402,10 @@ export default function CrorepatiChallengePage() {
   const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => {
       if(!activeTeam) return true;
       if (answerRevealed) return true; 
-      // For timed lifelines, check if they can be used.
-      // 50:50 can generally be used as long as not revealed and not already used this turn.
       if (type === 'fiftyFifty') {
           return !activeTeam.lifelines.fiftyFifty || fiftyFiftyUsedThisTurn;
       }
-      // For phone/team, they can't be used if another lifeline dialog is already active.
       if (isLifelineDialogActive) return true;
-
-      // Check if the specific lifeline is available
       return !activeTeam.lifelines[type];
   }
 
@@ -471,6 +434,9 @@ export default function CrorepatiChallengePage() {
         <Scoreboard teams={sortedTeams} />
         <Button onClick={() => {
           setGamePhase('SETUP'); 
+          setQuestions([]); // Clear questions to force reload
+          setCurrentQuestionIndex(0);
+          setActiveTeamIndex(0);
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
@@ -478,7 +444,7 @@ export default function CrorepatiChallengePage() {
     );
   }
 
-  if (!currentQuestion || !activeTeam) {
+  if (!currentQuestion || !activeTeam || questions.length === 0) {
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <GameLogo className="mb-8" />
@@ -614,4 +580,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-
