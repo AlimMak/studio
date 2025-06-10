@@ -92,8 +92,7 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    setTimerActive(true); 
-    setTimeLeft(30); 
+    // Timer will be started by the main useEffect when questions load
   }, []);
 
   useEffect(() => {
@@ -122,6 +121,7 @@ export default function CrorepatiChallengePage() {
         timerTickAudioRef.current.removeEventListener('canplaythrough', handleCanPlay);
         timerTickAudioRef.current.removeEventListener('error', handleError);
         timerTickAudioRef.current.pause();
+        timerTickAudioRef.current.srcObject = null; // More robust cleanup
         timerTickAudioRef.current.src = ''; 
         timerTickAudioRef.current = null;
       }
@@ -189,7 +189,7 @@ export default function CrorepatiChallengePage() {
         if (isAudioInitialized && timerTickAudioRef.current) {
             console.log("Audio: Pausing and resetting audio for new turn.");
             timerTickAudioRef.current.pause();
-            timerTickAudioRef.current.currentTime = 0;
+            timerTickAudioRef.current.currentTime = 0; // Reset audio to start for new question
         }
 
         setTimeLeft(currentQuestion.timeLimit);
@@ -204,6 +204,9 @@ export default function CrorepatiChallengePage() {
         } else { 
             console.log("TIMER_DEBUG: Setting timerActive to false for new turn. Reason: timeLimit <= 0 or lifeline dialog active.");
             setTimerActive(false); 
+             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) { // Ensure audio is paused if timer doesn't start
+                timerTickAudioRef.current.pause();
+            }
         }
     } else if (gamePhase === 'SETUP') {
         console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
@@ -242,7 +245,7 @@ export default function CrorepatiChallengePage() {
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, toast, activeTeam, answerRevealed, timerActive, isAudioInitialized
+    isLifelineDialogActive, toast, activeTeam, answerRevealed, isAudioInitialized // Added isAudioInitialized
   ]);
 
 
@@ -289,19 +292,18 @@ export default function CrorepatiChallengePage() {
     let intervalId: NodeJS.Timeout | undefined;
 
     if (timerActive && timeLeft > 0 && !isLifelineDialogActive) {
-      if (isAudioInitialized && timerTickAudioRef.current) {
-        if (timerTickAudioRef.current.paused) {
-            console.log(`Audio: Attempting to play timer tick. Current time: ${timerTickAudioRef.current.currentTime}`);
-            timerTickAudioRef.current.currentTime = 0; // Explicitly reset time before playing
-            timerTickAudioRef.current.play().catch(error => {
-                console.error("Audio: Playback error:", error);
-            });
-        }
-      }
       console.log("TIMER_DEBUG: Interval timer starting. timeLeft:", timeLeft);
       intervalId = setInterval(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
+
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) { // Play if paused
+        console.log(`Audio: Attempting to play timer tick from timer useEffect. Current time: ${timerTickAudioRef.current.currentTime}`);
+        // DO NOT reset currentTime here, it's done on new turn init
+        timerTickAudioRef.current.play().catch(error => {
+            console.error("Audio: Playback error in timer useEffect:", error);
+        });
+      }
     } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0) { 
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         console.log("Audio: Pausing timer tick (time up).");
@@ -309,7 +311,7 @@ export default function CrorepatiChallengePage() {
       }
       console.log("TIMER_DEBUG: Time's up! Handling answer select null.");
       handleAnswerSelect(null); 
-    } else { // Covers timerActive false, or timeLeft 0 (and already handled), or lifeline dialog active
+    } else { 
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         console.log("Audio: Pausing timer tick (timer not active, or other condition like lifeline/revealed).");
         timerTickAudioRef.current.pause();
@@ -318,10 +320,6 @@ export default function CrorepatiChallengePage() {
     
     return () => {
       clearInterval(intervalId);
-      // No need to pause audio here if the main 'else' block handles it, 
-      // or if the main game loop useEffect handles it for new turns/game over.
-      // However, as a safety, if the timer effect is cleaning up due to component unmount
-      // or timerActive just became false, pausing is good.
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         console.log("Audio: Pausing timer tick (timer effect cleanup).");
         timerTickAudioRef.current.pause();
@@ -461,8 +459,8 @@ export default function CrorepatiChallengePage() {
           setQuestions([]); 
           setCurrentQuestionIndex(0);
           setActiveTeamIndex(0);
-          // Resetting more states for a cleaner transition to SETUP
           if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+            console.log("Audio: Pausing audio on Play Again.");
             timerTickAudioRef.current.pause();
           }
           setTimerActive(false);
@@ -479,7 +477,6 @@ export default function CrorepatiChallengePage() {
           setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
           setPhoneAFriendLifelineTimerActive(false);
           setMainTimerWasActiveBeforeLifeline(false);
-          // Teams array will be re-initialized by TeamSetupForm -> handleStartGame
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
