@@ -20,4 +20,4 @@ export interface Team {
   };
 }
 
-export type GamePhase = 'SETUP' | 'PLAYING' | 'GAME_OVER';
+export type GamePhase = 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';

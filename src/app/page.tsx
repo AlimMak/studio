@@ -13,6 +13,7 @@ import AnswerButton from '@/components/game/AnswerButton';
 import TimerDisplay from '@/components/game/TimerDisplay';
 import LifelineControls from '@/components/game/LifelineControls';
 import GameLogo from '@/components/game/GameLogo';
+import RulesDisplay from '@/components/game/RulesDisplay'; // New Import
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -65,24 +66,16 @@ export default function CrorepatiChallengePage() {
   const prevActiveTeamIndexRef = useRef<number | undefined>();
 
 
-  const handleStartGame = useCallback((teamNames: string[]) => {
-    const newTeams: Team[] = teamNames.map((name, index) => ({
-      id: `team-${index + 1}-${Date.now()}`,
-      name: name.trim(),
-      score: 0,
-      lifelines: { fiftyFifty: true, phoneAFriend: true, askYourTeam: true },
-    }));
-    setTeams(newTeams);
+  const resetGameStates = useCallback(() => {
+    setTeams([]);
+    setQuestions([]);
     setCurrentQuestionIndex(0);
     setActiveTeamIndex(0);
-    setGamePhase('PLAYING');
-    
-    prevGamePhaseRef.current = 'SETUP'; 
-    prevCurrentQuestionIndexRef.current = undefined;
-    prevActiveTeamIndexRef.current = undefined;
-
-    setAnswerRevealed(false);
+    setTimeLeft(0);
+    setTimerActive(false);
+    setTimerManuallyStartedThisTurn(false);
     setSelectedAnswer(null);
+    setAnswerRevealed(false);
     setFiftyFiftyUsedThisTurn(false);
     setFiftyFiftyOptions(null);
     setShowTeamPoll(false);
@@ -93,9 +86,38 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    setTimerManuallyStartedThisTurn(false);
-    setTimerActive(false); 
+
+    prevGamePhaseRef.current = undefined;
+    prevCurrentQuestionIndexRef.current = undefined;
+    prevActiveTeamIndexRef.current = undefined;
+
+    if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        console.log("Audio: Pausing audio on game state reset.");
+        timerTickAudioRef.current.pause();
+    }
+  }, [isAudioInitialized]);
+
+  const handleStartGame = useCallback((teamNames: string[]) => {
+    resetGameStates(); 
+    const newTeams: Team[] = teamNames.map((name, index) => ({
+      id: `team-${index + 1}-${Date.now()}`,
+      name: name.trim(),
+      score: 0,
+      lifelines: { fiftyFifty: true, phoneAFriend: true, askYourTeam: true },
+    }));
+    setTeams(newTeams);
+    setCurrentQuestionIndex(0);
+    setActiveTeamIndex(0);
+    setGamePhase('RULES'); // Transition to RULES phase
+    
+    prevGamePhaseRef.current = 'SETUP'; 
+  }, [resetGameStates]);
+
+  const handleProceedToPlay = useCallback(() => {
+    setGamePhase('PLAYING');
+    prevGamePhaseRef.current = 'RULES'; // To correctly trigger new turn logic
   }, []);
+
 
   useEffect(() => {
     console.log("Audio: Initializing audio element");
@@ -134,7 +156,7 @@ export default function CrorepatiChallengePage() {
         }
         timerTickAudioRef.current.srcObject = null; 
         timerTickAudioRef.current.src = ''; 
-        timerTickAudioRef.current.load(); // Attempt to release resources
+        timerTickAudioRef.current.load(); 
         timerTickAudioRef.current = null;
       }
       setIsAudioInitialized(false);
@@ -171,7 +193,7 @@ export default function CrorepatiChallengePage() {
   }, [toast]);
 
   useEffect(() => {
-    if (gamePhase === 'PLAYING' && questions.length === 0) {
+    if ((gamePhase === 'PLAYING' || gamePhase === 'RULES') && questions.length === 0) {
       loadQuestions();
     }
   }, [gamePhase, questions.length, loadQuestions]);
@@ -181,10 +203,11 @@ export default function CrorepatiChallengePage() {
     let isNewTurnInitialization = false;
 
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && activeTeam) {
-      const gameJustStarted = prevGamePhaseRef.current === 'SETUP' && gamePhase === 'PLAYING';
+      const gameJustStarted = (prevGamePhaseRef.current === 'SETUP' || prevGamePhaseRef.current === 'RULES') && gamePhase === 'PLAYING';
       const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex && prevCurrentQuestionIndexRef.current !== undefined;
       const activeTeamIndexChanged = prevActiveTeamIndexRef.current !== activeTeamIndex && prevActiveTeamIndexRef.current !== undefined;
-      const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion;
+      const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion && prevGamePhaseRef.current === 'RULES';
+
 
       if ( (gameJustStarted && !!currentQuestion) ||
            (questionIndexChanged && !!currentQuestion) ||
@@ -214,27 +237,29 @@ export default function CrorepatiChallengePage() {
         setTimerActive(false); 
         setTimerManuallyStartedThisTurn(false); 
 
-    } else if (gamePhase === 'SETUP') {
-        console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
+    } else if (gamePhase === 'SETUP' || gamePhase === 'RULES') {
+        console.log("TIMER_DEBUG: Game in SETUP or RULES phase. Setting timerActive to false.");
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-            console.log("Audio: Pausing audio (SETUP phase).");
+            console.log("Audio: Pausing audio (SETUP/RULES phase).");
             timerTickAudioRef.current.pause();
         }
         setTimerActive(false); 
-        setTimeLeft(0);
-        setAnswerRevealed(false);
-        setSelectedAnswer(null);
-        setFiftyFiftyUsedThisTurn(false);
-        setFiftyFiftyOptions(null);
-        setShowTeamPoll(false);
-        setShowPhoneAFriend(false);
-        setIsLifelineDialogActive(false);
-        setAskTeamLifelineTimer(LIFELINE_DIALOG_DURATION);
-        setAskTeamLifelineTimerActive(false);
-        setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
-        setPhoneAFriendLifelineTimerActive(false);
-        setMainTimerWasActiveBeforeLifeline(false);
-        setTimerManuallyStartedThisTurn(false);
+        if(gamePhase === 'SETUP'){
+            setTimeLeft(0);
+            setAnswerRevealed(false);
+            setSelectedAnswer(null);
+            setFiftyFiftyUsedThisTurn(false);
+            setFiftyFiftyOptions(null);
+            setShowTeamPoll(false);
+            setShowPhoneAFriend(false);
+            setIsLifelineDialogActive(false);
+            setAskTeamLifelineTimer(LIFELINE_DIALOG_DURATION);
+            setAskTeamLifelineTimerActive(false);
+            setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
+            setPhoneAFriendLifelineTimerActive(false);
+            setMainTimerWasActiveBeforeLifeline(false);
+            setTimerManuallyStartedThisTurn(false);
+        }
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) { 
             console.log("TIMER_DEBUG: Game over, answer revealed, or lifeline. Setting timerActive to false.");
@@ -246,6 +271,7 @@ export default function CrorepatiChallengePage() {
         }
     }
     
+    // Only update prev refs if the relevant data for the turn is ready or phase is not PLAYING
     if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
       prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
@@ -460,6 +486,16 @@ export default function CrorepatiChallengePage() {
     );
   }
 
+  if (gamePhase === 'RULES') {
+    return (
+      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
+        <GameLogo className="mb-8" />
+        <RulesDisplay onProceed={handleProceedToPlay} />
+      </main>
+    );
+  }
+
+
   if (gamePhase === 'GAME_OVER') {
     const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
     return (
@@ -475,29 +511,8 @@ export default function CrorepatiChallengePage() {
         <h2 className="text-2xl font-semibold mb-4">Final Scores:</h2>
         <Scoreboard teams={sortedTeams} />
         <Button onClick={() => {
+          resetGameStates();
           setGamePhase('SETUP'); 
-          setQuestions([]); 
-          setCurrentQuestionIndex(0);
-          setActiveTeamIndex(0);
-          if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-            console.log("Audio: Pausing audio on Play Again.");
-            timerTickAudioRef.current.pause();
-          }
-          setTimerActive(false);
-          setTimeLeft(0);
-          setAnswerRevealed(false);
-          setSelectedAnswer(null);
-          setFiftyFiftyUsedThisTurn(false);
-          setFiftyFiftyOptions(null);
-          setShowTeamPoll(false);
-          setShowPhoneAFriend(false);
-          setIsLifelineDialogActive(false);
-          setAskTeamLifelineTimer(LIFELINE_DIALOG_DURATION);
-          setAskTeamLifelineTimerActive(false);
-          setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
-          setPhoneAFriendLifelineTimerActive(false);
-          setMainTimerWasActiveBeforeLifeline(false);
-          setTimerManuallyStartedThisTurn(false);
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
@@ -505,7 +520,7 @@ export default function CrorepatiChallengePage() {
     );
   }
 
-  if (!currentQuestion || !activeTeam || questions.length === 0) {
+  if ((gamePhase === 'PLAYING' || gamePhase === 'RULES') && (questions.length === 0 || (gamePhase === 'PLAYING' && !currentQuestion))) {
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <GameLogo className="mb-8" />
@@ -513,6 +528,17 @@ export default function CrorepatiChallengePage() {
       </main>
     );
   }
+  
+  if (gamePhase === 'PLAYING' && (!currentQuestion || !activeTeam) ) {
+     return (
+      <main className="flex-grow flex flex-col items-center justify-center p-4">
+        <GameLogo className="mb-8" />
+        <p className="text-xl">Error: Game in inconsistent state. Please restart.</p>
+         <Button onClick={() => { resetGameStates(); setGamePhase('SETUP'); }} className="mt-4">Restart</Button>
+      </main>
+    );
+  }
+
 
   const isStartTimerButtonDisabled = answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
   const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive;
@@ -657,15 +683,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-    
-    
-
-    
-
-    
-
-    
-
-    
-
-    
