@@ -16,7 +16,7 @@ import GameLogo from '@/components/game/GameLogo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PartyPopper, ChevronRight, TimerIcon } from 'lucide-react';
+import { PartyPopper, ChevronRight, TimerIcon, PlayIcon } from 'lucide-react';
 
 const MAX_TEAMS = 6;
 const AI_VARIATION_CHANCE = 0; 
@@ -31,6 +31,7 @@ export default function CrorepatiChallengePage() {
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
+  const [timerManuallyStartedThisTurn, setTimerManuallyStartedThisTurn] = useState(false);
 
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [answerRevealed, setAnswerRevealed] = useState(false);
@@ -92,7 +93,8 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
-    // Timer will be started by the main useEffect when questions load
+    setTimerManuallyStartedThisTurn(false);
+    setTimerActive(false); // Timer won't start automatically
   }, []);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function CrorepatiChallengePage() {
         timerTickAudioRef.current.removeEventListener('canplaythrough', handleCanPlay);
         timerTickAudioRef.current.removeEventListener('error', handleError);
         timerTickAudioRef.current.pause();
-        timerTickAudioRef.current.srcObject = null; // More robust cleanup
+        timerTickAudioRef.current.srcObject = null; 
         timerTickAudioRef.current.src = ''; 
         timerTickAudioRef.current = null;
       }
@@ -186,10 +188,12 @@ export default function CrorepatiChallengePage() {
     if (isNewTurnInitialization) {
         console.log("TIMER_DEBUG: New turn initialization. Q_ID:", currentQuestion.id, "TimeLimit:", currentQuestion.timeLimit, "isLifelineActive:", isLifelineDialogActive);
         
-        if (isAudioInitialized && timerTickAudioRef.current) {
+        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
             console.log("Audio: Pausing and resetting audio for new turn.");
             timerTickAudioRef.current.pause();
-            timerTickAudioRef.current.currentTime = 0; // Reset audio to start for new question
+        }
+        if (isAudioInitialized && timerTickAudioRef.current) {
+           timerTickAudioRef.current.currentTime = 0; 
         }
 
         setTimeLeft(currentQuestion.timeLimit);
@@ -197,17 +201,9 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
         setAnswerRevealed(false); 
+        setTimerActive(false); // Timer does not start automatically
+        setTimerManuallyStartedThisTurn(false); // Reset manual start flag
 
-        if (currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
-            console.log("TIMER_DEBUG: Setting timerActive to true for new turn.");
-            setTimerActive(true); 
-        } else { 
-            console.log("TIMER_DEBUG: Setting timerActive to false for new turn. Reason: timeLimit <= 0 or lifeline dialog active.");
-            setTimerActive(false); 
-             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) { 
-                timerTickAudioRef.current.pause();
-            }
-        }
     } else if (gamePhase === 'SETUP') {
         console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
@@ -228,6 +224,7 @@ export default function CrorepatiChallengePage() {
         setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
         setPhoneAFriendLifelineTimerActive(false);
         setMainTimerWasActiveBeforeLifeline(false);
+        setTimerManuallyStartedThisTurn(false);
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) { 
             console.log("TIMER_DEBUG: Game over, answer revealed, or lifeline. Setting timerActive to false.");
@@ -239,7 +236,6 @@ export default function CrorepatiChallengePage() {
         }
     }
     
-    // Conditionally update previous state refs
     if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
       prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
@@ -248,12 +244,12 @@ export default function CrorepatiChallengePage() {
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, toast, activeTeam, answerRevealed, isAudioInitialized
+    isLifelineDialogActive, activeTeam, answerRevealed, isAudioInitialized 
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || (!timerActive && optionIndex !== null && currentQuestion && timeLeft > 0 && currentQuestion.timeLimit > 0) ) {
+    if (answerRevealed || (!timerManuallyStartedThisTurn && optionIndex !== null) ) { // Don't process answer if timer not started, unless it's times up
       return;
     }
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
@@ -276,7 +272,7 @@ export default function CrorepatiChallengePage() {
          toast({ title: optionIndex === null ? "Time's Up!" : "Incorrect!", description: "Better luck next time.", variant: "destructive", duration: 2000 });
       }
     }, 1500);
-  }, [answerRevealed, timerActive, currentQuestion, activeTeam, toast, timeLeft, isAudioInitialized]);
+  }, [answerRevealed, timerManuallyStartedThisTurn, currentQuestion, activeTeam, toast, isAudioInitialized]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
@@ -306,7 +302,7 @@ export default function CrorepatiChallengePage() {
             console.error("Audio: Playback error in timer useEffect:", error);
         });
       }
-    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0) { 
+    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0 && timerManuallyStartedThisTurn) { 
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         console.log("Audio: Pausing timer tick (time up).");
         timerTickAudioRef.current.pause();
@@ -327,7 +323,7 @@ export default function CrorepatiChallengePage() {
         timerTickAudioRef.current.pause();
       }
     };
-  }, [timerActive, timeLeft, isLifelineDialogActive, answerRevealed, handleAnswerSelect, currentQuestion, isAudioInitialized]);
+  }, [timerActive, timeLeft, isLifelineDialogActive, answerRevealed, handleAnswerSelect, currentQuestion, isAudioInitialized, timerManuallyStartedThisTurn]);
 
   useEffect(() => {
     let lifelineIntervalId: NodeJS.Timeout | undefined;
@@ -416,7 +412,8 @@ export default function CrorepatiChallengePage() {
     
     setIsLifelineDialogActive(false);
 
-    if (mainTimerWasActiveBeforeLifeline && currentQuestion && !answerRevealed && timeLeft > 0) {
+    // Only resume main timer if it was manually started and active before lifeline
+    if (mainTimerWasActiveBeforeLifeline && timerManuallyStartedThisTurn && currentQuestion && !answerRevealed && timeLeft > 0) {
       setTimerActive(true); 
     }
     setMainTimerWasActiveBeforeLifeline(false); 
@@ -429,9 +426,21 @@ export default function CrorepatiChallengePage() {
       if (type === 'fiftyFifty') {
           return !activeTeam.lifelines.fiftyFifty || fiftyFiftyUsedThisTurn;
       }
-      if (isLifelineDialogActive) return true;
+      if (isLifelineDialogActive) return true; // Disable other lifelines if one dialog is already open
       return !activeTeam.lifelines[type];
   }
+
+  const handleStartManualTimer = () => {
+    if (!answerRevealed && timeLeft > 0 && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
+      setTimerActive(true);
+      setTimerManuallyStartedThisTurn(true);
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
+        timerTickAudioRef.current.currentTime = 0; 
+        timerTickAudioRef.current.play().catch(e => console.error("Audio: Playback error on manual start", e));
+      }
+    }
+  };
+
 
   if (gamePhase === 'SETUP') {
     return (
@@ -479,6 +488,7 @@ export default function CrorepatiChallengePage() {
           setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
           setPhoneAFriendLifelineTimerActive(false);
           setMainTimerWasActiveBeforeLifeline(false);
+          setTimerManuallyStartedThisTurn(false);
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
@@ -495,6 +505,8 @@ export default function CrorepatiChallengePage() {
     );
   }
 
+  const isStartTimerButtonDisabled = answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
+
   return (
     <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
       <header className="w-full mb-2 md:mb-4">
@@ -505,6 +517,18 @@ export default function CrorepatiChallengePage() {
         <div className="w-full mb-2 md:mb-4">
          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
         </div>
+        
+        {!answerRevealed && !timerActive && currentQuestion && currentQuestion.timeLimit > 0 && (
+            <Button 
+                onClick={handleStartManualTimer} 
+                disabled={isStartTimerButtonDisabled}
+                className="mb-4 bg-green-600 hover:bg-green-700 text-white"
+                size="lg"
+            >
+                <PlayIcon className="mr-2 h-5 w-5" /> Start Timer
+            </Button>
+        )}
+
 
         <div className="w-full mb-4 md:mb-6">
           {currentQuestion && <QuestionDisplay
@@ -512,7 +536,7 @@ export default function CrorepatiChallengePage() {
             onAnswerSelect={handleAnswerSelect} 
             selectedAnswer={selectedAnswer}     
             revealAnswer={answerRevealed}       
-            isAnswerDisabled={answerRevealed || (!timerActive && timeLeft > 0 && currentQuestion.timeLimit > 0 && !isLifelineDialogActive)} 
+            isAnswerDisabled={answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive } 
           />}
         </div>
 
@@ -524,7 +548,7 @@ export default function CrorepatiChallengePage() {
                 index={index}
                 optionText={option}
                 onClick={() => handleAnswerSelect(index)}
-                disabled={answerRevealed || (!timerActive && timeLeft > 0 && currentQuestion.timeLimit > 0 && !isLifelineDialogActive) || (fiftyFiftyOptions?.includes(index) ?? false)}
+                disabled={answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive || (fiftyFiftyOptions?.includes(index) ?? false)}
                 isSelected={selectedAnswer === index}
                 isCorrect={index === currentQuestion.correctAnswerIndex}
                 reveal={answerRevealed}
@@ -545,7 +569,7 @@ export default function CrorepatiChallengePage() {
           <LifelineControls
             activeTeam={activeTeam}
             onUseLifeline={handleUseLifeline}
-            disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam')}
+            disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam') || isLifelineDialogActive}
           />
           <div className="mt-6">
             <Scoreboard teams={teams} activeTeamId={activeTeam.id} />
