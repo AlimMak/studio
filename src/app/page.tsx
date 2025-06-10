@@ -204,7 +204,7 @@ export default function CrorepatiChallengePage() {
         } else { 
             console.log("TIMER_DEBUG: Setting timerActive to false for new turn. Reason: timeLimit <= 0 or lifeline dialog active.");
             setTimerActive(false); 
-             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) { // Ensure audio is paused if timer doesn't start
+             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) { 
                 timerTickAudioRef.current.pause();
             }
         }
@@ -239,13 +239,16 @@ export default function CrorepatiChallengePage() {
         }
     }
     
-    prevGamePhaseRef.current = gamePhase;
-    prevCurrentQuestionIndexRef.current = currentQuestionIndex;
-    prevActiveTeamIndexRef.current = activeTeamIndex;
+    // Conditionally update previous state refs
+    if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
+      prevGamePhaseRef.current = gamePhase;
+      prevCurrentQuestionIndexRef.current = currentQuestionIndex;
+      prevActiveTeamIndexRef.current = activeTeamIndex;
+    }
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, toast, activeTeam, answerRevealed, isAudioInitialized // Added isAudioInitialized
+    isLifelineDialogActive, toast, activeTeam, answerRevealed, isAudioInitialized
   ]);
 
 
@@ -297,9 +300,8 @@ export default function CrorepatiChallengePage() {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
 
-      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) { // Play if paused
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) { 
         console.log(`Audio: Attempting to play timer tick from timer useEffect. Current time: ${timerTickAudioRef.current.currentTime}`);
-        // DO NOT reset currentTime here, it's done on new turn init
         timerTickAudioRef.current.play().catch(error => {
             console.error("Audio: Playback error in timer useEffect:", error);
         });
