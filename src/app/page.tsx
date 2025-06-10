@@ -94,7 +94,7 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
     setTimerManuallyStartedThisTurn(false);
-    setTimerActive(false); // Timer won't start automatically
+    setTimerActive(false); 
   }, []);
 
   useEffect(() => {
@@ -123,8 +123,18 @@ export default function CrorepatiChallengePage() {
         timerTickAudioRef.current.removeEventListener('canplaythrough', handleCanPlay);
         timerTickAudioRef.current.removeEventListener('error', handleError);
         timerTickAudioRef.current.pause();
+        try {
+            if (timerTickAudioRef.current.srcObject) {
+              // @ts-ignore
+              const tracks = timerTickAudioRef.current.srcObject.getTracks();
+              tracks.forEach((track: MediaStreamTrack) => track.stop());
+            }
+        } catch (e) {
+            console.warn("Audio: Error stopping media tracks", e);
+        }
         timerTickAudioRef.current.srcObject = null; 
         timerTickAudioRef.current.src = ''; 
+        timerTickAudioRef.current.load(); // Attempt to release resources
         timerTickAudioRef.current = null;
       }
       setIsAudioInitialized(false);
@@ -201,8 +211,8 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
         setAnswerRevealed(false); 
-        setTimerActive(false); // Timer does not start automatically
-        setTimerManuallyStartedThisTurn(false); // Reset manual start flag
+        setTimerActive(false); 
+        setTimerManuallyStartedThisTurn(false); 
 
     } else if (gamePhase === 'SETUP') {
         console.log("TIMER_DEBUG: Game in SETUP phase. Setting timerActive to false.");
@@ -249,7 +259,7 @@ export default function CrorepatiChallengePage() {
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (answerRevealed || (!timerManuallyStartedThisTurn && optionIndex !== null) ) { // Don't process answer if timer not started, unless it's times up
+    if (answerRevealed || (!timerManuallyStartedThisTurn && optionIndex !== null) ) { 
       return;
     }
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
@@ -412,7 +422,6 @@ export default function CrorepatiChallengePage() {
     
     setIsLifelineDialogActive(false);
 
-    // Only resume main timer if it was manually started and active before lifeline
     if (mainTimerWasActiveBeforeLifeline && timerManuallyStartedThisTurn && currentQuestion && !answerRevealed && timeLeft > 0) {
       setTimerActive(true); 
     }
@@ -426,7 +435,7 @@ export default function CrorepatiChallengePage() {
       if (type === 'fiftyFifty') {
           return !activeTeam.lifelines.fiftyFifty || fiftyFiftyUsedThisTurn;
       }
-      if (isLifelineDialogActive) return true; // Disable other lifelines if one dialog is already open
+      if (isLifelineDialogActive) return true; 
       return !activeTeam.lifelines[type];
   }
 
@@ -506,6 +515,7 @@ export default function CrorepatiChallengePage() {
   }
 
   const isStartTimerButtonDisabled = answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
+  const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive;
 
   return (
     <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
@@ -518,7 +528,7 @@ export default function CrorepatiChallengePage() {
          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
         </div>
         
-        {!answerRevealed && !timerActive && currentQuestion && currentQuestion.timeLimit > 0 && (
+        {!answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
             <Button 
                 onClick={handleStartManualTimer} 
                 disabled={isStartTimerButtonDisabled}
@@ -536,7 +546,7 @@ export default function CrorepatiChallengePage() {
             onAnswerSelect={handleAnswerSelect} 
             selectedAnswer={selectedAnswer}     
             revealAnswer={answerRevealed}       
-            isAnswerDisabled={answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive } 
+            isAnswerDisabled={generalAnswerButtonDisabledCondition} 
           />}
         </div>
 
@@ -548,7 +558,8 @@ export default function CrorepatiChallengePage() {
                 index={index}
                 optionText={option}
                 onClick={() => handleAnswerSelect(index)}
-                disabled={answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive || (fiftyFiftyOptions?.includes(index) ?? false)}
+                disabledForInteraction={generalAnswerButtonDisabledCondition}
+                isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
                 isSelected={selectedAnswer === index}
                 isCorrect={index === currentQuestion.correctAnswerIndex}
                 reveal={answerRevealed}
