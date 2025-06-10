@@ -93,7 +93,7 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
     setTimerActive(true); 
-    setTimeLeft(30); // Default for first question if timeLimit isn't immediately available
+    setTimeLeft(30); 
   }, []);
 
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function CrorepatiChallengePage() {
     if (isNewTurnInitialization) {
         console.log("TIMER_DEBUG: New turn initialization. Q_ID:", currentQuestion.id, "TimeLimit:", currentQuestion.timeLimit, "isLifelineActive:", isLifelineDialogActive);
         
-        if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        if (isAudioInitialized && timerTickAudioRef.current) {
             console.log("Audio: Pausing and resetting audio for new turn.");
             timerTickAudioRef.current.pause();
             timerTickAudioRef.current.currentTime = 0;
@@ -289,11 +289,14 @@ export default function CrorepatiChallengePage() {
     let intervalId: NodeJS.Timeout | undefined;
 
     if (timerActive && timeLeft > 0 && !isLifelineDialogActive) {
-      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
-        console.log("Audio: Attempting to play timer tick (timer active).");
-        timerTickAudioRef.current.play().catch(error => {
-          console.error("Audio: Playback error:", error);
-        });
+      if (isAudioInitialized && timerTickAudioRef.current) {
+        if (timerTickAudioRef.current.paused) {
+            console.log(`Audio: Attempting to play timer tick. Current time: ${timerTickAudioRef.current.currentTime}`);
+            timerTickAudioRef.current.currentTime = 0; // Explicitly reset time before playing
+            timerTickAudioRef.current.play().catch(error => {
+                console.error("Audio: Playback error:", error);
+            });
+        }
       }
       console.log("TIMER_DEBUG: Interval timer starting. timeLeft:", timeLeft);
       intervalId = setInterval(() => {
@@ -306,15 +309,19 @@ export default function CrorepatiChallengePage() {
       }
       console.log("TIMER_DEBUG: Time's up! Handling answer select null.");
       handleAnswerSelect(null); 
-    } else {
+    } else { // Covers timerActive false, or timeLeft 0 (and already handled), or lifeline dialog active
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing timer tick (timer not active or other condition).");
+        console.log("Audio: Pausing timer tick (timer not active, or other condition like lifeline/revealed).");
         timerTickAudioRef.current.pause();
       }
     }
     
     return () => {
       clearInterval(intervalId);
+      // No need to pause audio here if the main 'else' block handles it, 
+      // or if the main game loop useEffect handles it for new turns/game over.
+      // However, as a safety, if the timer effect is cleaning up due to component unmount
+      // or timerActive just became false, pausing is good.
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         console.log("Audio: Pausing timer tick (timer effect cleanup).");
         timerTickAudioRef.current.pause();
@@ -617,6 +624,8 @@ export default function CrorepatiChallengePage() {
   );
 }
     
+    
+
     
 
     
