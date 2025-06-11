@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -19,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { PartyPopper, ChevronRight, TimerIcon, PlayIcon, Gamepad2 } from 'lucide-react';
+import KBCQuestionScreen from '@/components/game/KBCQuestionScreen';
 
 const MAX_TEAMS = 6;
 const AI_VARIATION_CHANCE = 0;
@@ -53,11 +53,15 @@ export default function CrorepatiChallengePage() {
 
   const [mainTimerWasActiveBeforeLifeline, setMainTimerWasActiveBeforeLifeline] = useState(false);
 
+  const [showScoreboard, setShowScoreboard] = useState(false);
 
   const { toast } = useToast();
 
   const currentQuestion = questions[currentQuestionIndex];
   const activeTeam = teams[activeTeamIndex];
+
+  const isStartTimerButtonDisabled = areAnswersVisible || answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
+  const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive || !areAnswersVisible;
 
   const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
@@ -90,6 +94,7 @@ export default function CrorepatiChallengePage() {
     setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
     setPhoneAFriendLifelineTimerActive(false);
     setMainTimerWasActiveBeforeLifeline(false);
+    setShowScoreboard(false);
 
     prevGamePhaseRef.current = undefined;
     prevCurrentQuestionIndexRef.current = undefined;
@@ -112,7 +117,7 @@ export default function CrorepatiChallengePage() {
   const handleProceedToHostIntro = useCallback(() => {
     setGamePhase('HOST_INTRODUCTION');
     prevGamePhaseRef.current = 'TITLE_SCREEN';
-  }, []);
+  }, [backgroundMusicAudioRef]);
 
   const handleProceedToSetup = useCallback(() => {
     setGamePhase('SETUP');
@@ -229,14 +234,26 @@ export default function CrorepatiChallengePage() {
       return;
     }
 
-    if (gamePhase === 'TITLE_SCREEN') {
-      backgroundMusicAudioRef.current.loop = true;
-      backgroundMusicAudioRef.current.play().catch(error => {
-      });
-    } else {
-      if (backgroundMusicAudioRef.current && !backgroundMusicAudioRef.current.paused) {
-        backgroundMusicAudioRef.current.pause();
-        backgroundMusicAudioRef.current.currentTime = 0;
+    const audio = backgroundMusicAudioRef.current;
+
+    // Phases where background music should play and restart
+    const playAndRestartPhases: GamePhase[] = ['TITLE_SCREEN', 'SETUP', 'RULES'];
+
+    // Phases where background music should be paused
+    const pauseAndRewindPhases: GamePhase[] = ['HOST_INTRODUCTION', 'PLAYING', 'GAME_OVER', 'SCOREBOARD'];
+
+    if (playAndRestartPhases.includes(gamePhase)) {
+      if (audio.paused) {
+        audio.loop = true;
+        audio.currentTime = 0; // Always rewind to start for these pages
+        audio.play().catch(error => {
+          console.error(`Background music playback failed for game phase ${gamePhase}:`, error);
+        });
+      }
+    } else if (pauseAndRewindPhases.includes(gamePhase)) {
+      if (!audio.paused) {
+        audio.pause();
+        audio.currentTime = 0; // Rewind for next time
       }
     }
   }, [gamePhase, isBackgroundAudioInitialized]);
@@ -244,9 +261,26 @@ export default function CrorepatiChallengePage() {
 
   const loadQuestions = useCallback(async () => {
     const baseQuestions = getQuestions();
+    const questionsByDifficulty: { [moneyValue: number]: Question[] } = {};
+    baseQuestions.forEach(q => {
+      if (!questionsByDifficulty[q.moneyValue]) questionsByDifficulty[q.moneyValue] = [];
+      questionsByDifficulty[q.moneyValue].push(q);
+    });
+
+    const selectedQuestions: Question[] = [];
+    const teamCount = teams.length || 1;
+    Object.keys(questionsByDifficulty)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .forEach(moneyValue => {
+        const group = questionsByDifficulty[moneyValue];
+        const shuffled = [...group].sort(() => Math.random() - 0.5);
+        selectedQuestions.push(...shuffled.slice(0, teamCount));
+      });
+
     if (AI_VARIATION_CHANCE > 0) {
       const variedQuestions = await Promise.all(
-        baseQuestions.map(async (q) => {
+        selectedQuestions.map(async (q) => {
           if (Math.random() < AI_VARIATION_CHANCE) {
             try {
               const variation = await generateQuestionVariation({ question: q.text });
@@ -266,9 +300,9 @@ export default function CrorepatiChallengePage() {
       );
       setQuestions(variedQuestions);
     } else {
-      setQuestions(baseQuestions);
+      setQuestions(selectedQuestions);
     }
-  }, [toast]);
+  }, [toast, teams.length]);
 
   useEffect(() => {
     if ((gamePhase === 'PLAYING' || gamePhase === 'RULES') && questions.length === 0) {
@@ -306,9 +340,10 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyOptions(null);
         setAnswerRevealed(false);
         setSelectedAnswer(null);
- setTimerActive(false);
+        setTimerActive(false);
+        setTimerManuallyStartedThisTurn(false);
         setAreAnswersVisible(false);
-        setAreAnswersVisible(true); // Make answers visible by default
+        setAreAnswersVisible(true);
     } else if (gamePhase === 'TITLE_SCREEN' || gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
             timerTickAudioRef.current.pause();
@@ -323,7 +358,7 @@ export default function CrorepatiChallengePage() {
         }
     }
 
-    if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase === 'question' || gamePhase !== 'PLAYING') {
+    if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
  prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
       prevActiveTeamIndexRef.current = activeTeamIndex;
@@ -336,24 +371,23 @@ export default function CrorepatiChallengePage() {
   ]);
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (optionIndex !== null) { // User selected an answer
+    if (optionIndex !== null) {
         if (!timerManuallyStartedThisTurn) {
             toast({ title: "Timer Not Started", description: "Please start the timer before selecting an answer.", variant: "destructive", duration: 2000 });
             return;
         }
     }
-    // Fall through if optionIndex is null (time's up) or if above checks pass for user click
 
     if (!currentQuestion || !activeTeam) {
-        return; // Should not happen if game is in PLAYING and question/team are set
+        return;
     }
 
     setSelectedAnswer(optionIndex);
-    setTimerActive(false); // Stop timer immediately
+    setTimerActive(false);
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        timerTickAudioRef.current.pause(); // Stop audio immediately
+        timerTickAudioRef.current.pause();
     }
-    setAnswerRevealed(true); // Reveal correct/incorrect state and show "Continue" button
+    setAnswerRevealed(true);
 
     const isCorrect = optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
 
@@ -382,21 +416,34 @@ export default function CrorepatiChallengePage() {
     }
   }, [
       timerManuallyStartedThisTurn, currentQuestion, activeTeam, isAudioInitialized,
-      toast // Removed timeLeft from dependencies as its direct check here could be problematic
+      toast
   ]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
 
     const nextQuestionIndexToUse = currentQuestionIndex + 1;
+    const nextTeamIndex = (activeTeamIndex + 1) % teams.length;
+
+    if ((nextQuestionIndexToUse) % teams.length === 0 && nextQuestionIndexToUse < questions.length) {
+      setShowScoreboard(true);
+      setActiveTeamIndex(nextTeamIndex);
+      return;
+    }
 
     if (nextQuestionIndexToUse < questions.length) {
       setCurrentQuestionIndex(nextQuestionIndexToUse);
+      setActiveTeamIndex(nextTeamIndex);
     } else {
       setGamePhase('GAME_OVER');
     }
-  }, [answerRevealed, gamePhase, currentQuestionIndex, questions.length]);
+  }, [answerRevealed, gamePhase, currentQuestionIndex, questions.length, teams.length, activeTeamIndex]);
 
+  const handleContinueAfterScoreboard = () => {
+    setShowScoreboard(false);
+    setCurrentQuestionIndex(currentQuestionIndex + 1);
+    setActiveTeamIndex((activeTeamIndex + 1) % teams.length);
+  };
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
@@ -543,6 +590,14 @@ export default function CrorepatiChallengePage() {
     }
   };
 
+  const stopBackgroundMusic = useCallback(() => {
+    if (isBackgroundAudioInitialized && backgroundMusicAudioRef.current && !backgroundMusicAudioRef.current.paused) {
+      backgroundMusicAudioRef.current.pause();
+      backgroundMusicAudioRef.current.currentTime = 0;
+    }
+  }, [isBackgroundAudioInitialized]);
+
+  // Explicitly defined rendering for each game phase
   if (gamePhase === 'TITLE_SCREEN') {
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
@@ -562,7 +617,7 @@ export default function CrorepatiChallengePage() {
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
         <GameLogo className="mb-8" />
-        <HostIntroductionDisplay onProceed={handleProceedToSetup} />
+        <HostIntroductionDisplay onProceed={handleProceedToSetup} onStopBackgroundMusic={stopBackgroundMusic} />
       </main>
     );
   }
@@ -577,6 +632,14 @@ export default function CrorepatiChallengePage() {
   }
 
   if (gamePhase === 'RULES') {
+    if (questions.length === 0) {
+      return (
+        <main className="flex-grow flex flex-col items-center justify-center p-4">
+          <GameLogo className="mb-8" />
+          <p className="text-xl">Loading game...</p>
+        </main>
+      );
+    }
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
         <GameLogo className="mb-8" />
@@ -585,179 +648,190 @@ export default function CrorepatiChallengePage() {
     );
   }
 
+  if (gamePhase === 'PLAYING') {
+    if (questions.length === 0 || !currentQuestion || !activeTeam) {
+      return (
+        <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in">
+          <GameLogo className="mb-6" />
+          <div className="bg-gradient-to-br from-[#1a1440] via-[#2d1e5f] to-[#1a1440] w-full max-w-xl mx-auto p-8 rounded-[2rem] shadow-2xl flex flex-col items-center mb-8">
+            <p className="text-xl md:text-2xl font-bold text-red-500 mb-4">Error: Game in inconsistent state.</p>
+            <p className="text-lg md:text-xl text-white mb-6">Please restart the game to continue.</p>
+            <Button onClick={() => { resetGameStates(); setGamePhase('TITLE_SCREEN'); }} className="mt-4 text-lg py-3 px-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl shadow">
+              Restart
+            </Button>
+          </div>
+        </main>
+      );
+    }
+
+    return (
+      <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
+        <header className="w-full mb-2 md:mb-4 flex flex-col items-center">
+          <GameLogo size="small" />
+        </header>
+
+        <KBCQuestionScreen
+          question={currentQuestion.text}
+          options={currentQuestion.options}
+          onAnswerSelect={handleAnswerSelect}
+          selectedAnswer={selectedAnswer}
+          correctAnswer={answerRevealed ? currentQuestion.correctAnswerIndex : null}
+          answerRevealed={answerRevealed}
+          timer={{
+            timeLeft,
+            maxTime: currentQuestion.timeLimit,
+            active: timerActive && timerManuallyStartedThisTurn,
+            onStart: handleStartManualTimer,
+          }}
+          onQuit={resetGameStates}
+          lifelines={
+            <LifelineControls
+              activeTeam={activeTeam}
+              onUseLifeline={handleUseLifeline}
+              disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam') || isLifelineDialogActive}
+            />
+          }
+          disabledOptions={fiftyFiftyUsedThisTurn && fiftyFiftyOptions ? fiftyFiftyOptions : []}
+          isAnswerDisabled={generalAnswerButtonDisabledCondition}
+          continueButton={
+            answerRevealed && !isLifelineDialogActive && (
+              <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+                Continue <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
+            )
+          }
+          activeTeamName={activeTeam?.name || ''}
+          questionValue={currentQuestion.moneyValue}
+        />
+
+        <Dialog open={showTeamPoll} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('askYourTeam'); else setShowTeamPoll(true); }}>
+          <DialogContent className="max-w-lg bg-gradient-to-br from-[#1a1440] via-[#2d1e5f] to-[#1a1440] rounded-[2rem] text-white shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-yellow-400">Ask Your Team</DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="my-4 text-lg text-center text-white">
+              Confer with your team.
+            </DialogDescription>
+            <div className="my-6 flex flex-col items-center space-y-4">
+              <div className="text-6xl font-bold text-yellow-400 flex items-center">
+                <TimerIcon className="w-12 h-12 mr-3"/>
+                {askTeamLifelineTimer}s
+              </div>
+              <Button
+                onClick={() => {
+                  if (askTeamLifelineTimer > 0 && !askTeamLifelineTimerActive) {
+                    setAskTeamLifelineTimerActive(true);
+                  }
+                }}
+                disabled={askTeamLifelineTimerActive || askTeamLifelineTimer === 0}
+                size="lg"
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl shadow"
+              >
+                {askTeamLifelineTimer === 0 ? "Time Up" : (askTeamLifelineTimerActive ? "Timer Running..." : `Start ${LIFELINE_DIALOG_DURATION}s Timer`)}
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => closeLifelineDialog('askYourTeam')} className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl shadow">Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showPhoneAFriend} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('phoneAFriend'); else setShowPhoneAFriend(true); }}>
+          <DialogContent className="max-w-lg bg-gradient-to-br from-[#1a1440] via-[#2d1e5f] to-[#1a1440] rounded-[2rem] text-white shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-yellow-400">Phone a Friend</DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="my-4 text-lg text-center text-white">
+              You have {LIFELINE_DIALOG_DURATION} seconds to 'call' your friend.
+            </DialogDescription>
+             <div className="my-6 flex flex-col items-center space-y-4">
+              <div className="text-6xl font-bold text-yellow-400 flex items-center">
+                <TimerIcon className="w-12 h-12 mr-3"/>
+                {phoneAFriendLifelineTimer}s
+              </div>
+              <Button
+                onClick={() => {
+                   if (phoneAFriendLifelineTimer > 0 && !phoneAFriendLifelineTimerActive) {
+                      setPhoneAFriendLifelineTimerActive(true);
+                   }
+                }}
+                disabled={phoneAFriendLifelineTimerActive || phoneAFriendLifelineTimer === 0}
+                size="lg"
+                className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl shadow"
+              >
+                {phoneAFriendLifelineTimer === 0 ? "Time Up" : (phoneAFriendLifelineTimerActive ? "Timer Running..." : `Start ${LIFELINE_DIALOG_DURATION}s Timer`)}
+              </Button>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => closeLifelineDialog('phoneAFriend')} className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl shadow">Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {showScoreboard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70">
+            <div className="bg-gradient-to-br from-[#1a1440] via-[#2d1e5f] to-[#1a1440] w-[90vw] max-w-2xl mx-auto p-8 rounded-[2rem] shadow-2xl flex flex-col items-center">
+              <h2 className="text-3xl font-bold text-center text-white mb-6 flex items-center justify-center gap-2">
+                <span className="inline-block">
+                  <svg width="32" height="32" fill="#FFD700" viewBox="0 0 24 24">
+                    <path d="M12 2l2.09 6.26L20 9.27l-5 3.64L16.18 20 12 16.9 7.82 20 9 12.91l-5-3.64 5.91-.01z" />
+                  </svg>
+                </span>
+                Scoreboard
+              </h2>
+              <div className="w-full mb-6">
+                <Scoreboard teams={teams} activeTeamId={activeTeam?.id} />
+              </div>
+              <Button onClick={handleContinueAfterScoreboard} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground mt-4">
+                Continue <ChevronRight className="ml-2 w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </main>
+    );
+  }
 
   if (gamePhase === 'GAME_OVER') {
     const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
     }
+    const winner = sortedTeams[0];
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in">
         <GameLogo className="mb-6" />
-        <PartyPopper className="w-24 h-24 text-accent mb-6 animate-bounce" />
-        <h1 className="text-5xl font-bold font-headline mb-4 text-primary">Game Over!</h1>
-        {sortedTeams.length > 0 && (
-          <p className="text-3xl mb-8">
-            🎉 Congratulations <span className="text-accent font-semibold">{sortedTeams[0].name}</span>! 🎉
-          </p>
-        )}
-        <h2 className="text-2xl font-semibold mb-4">Final Scores:</h2>
-        <Scoreboard teams={sortedTeams} />
-        <Button onClick={() => {
-          resetGameStates();
-          setGamePhase('TITLE_SCREEN');
-          }} className="mt-8 text-lg py-3 px-6">
-          Play Again
-        </Button>
+        <div className="bg-gradient-to-br from-[#1a1440] via-[#2d1e5f] to-[#1a1440] w-full max-w-xl mx-auto p-8 rounded-[2rem] shadow-2xl flex flex-col items-center mb-8">
+          <PartyPopper className="w-24 h-24 text-yellow-400 mb-4 animate-bounce" />
+          <h1 className="text-5xl font-bold font-headline mb-4 text-white drop-shadow">Game Over!</h1>
+          {winner && (
+            <div className="mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold font-headline text-yellow-400 mb-2 flex items-center justify-center gap-2">
+                <span role='img' aria-label='trophy'>🏆</span> {winner.name} <span role='img' aria-label='trophy'>🏆</span>
+              </h2>
+              <p className="text-2xl md:text-3xl font-bold text-green-400 font-headline">${winner.score.toLocaleString()}</p>
+            </div>
+          )}
+          <h2 className="text-xl md:text-2xl font-semibold text-white mb-4 mt-2">Final Scores:</h2>
+          <div className="w-full">
+            <Scoreboard teams={sortedTeams} />
+          </div>
+          <Button onClick={() => {
+            resetGameStates();
+            setGamePhase('TITLE_SCREEN');
+          }} className="mt-8 text-lg py-3 px-6 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-xl shadow">
+            Home
+          </Button>
+        </div>
       </main>
     );
   }
 
-  if ((gamePhase === 'PLAYING' || gamePhase === 'RULES') && (questions.length === 0 || (gamePhase === 'PLAYING' && !currentQuestion))) {
-    return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4">
-        <GameLogo className="mb-8" />
-        <p className="text-xl">Loading game...</p>
-      </main>
-    );
-  }
-
-  if (gamePhase === 'PLAYING' && (!currentQuestion || !activeTeam) ) {
-     return (
-      <main className="flex-grow flex flex-col items-center justify-center p-4">
-        <GameLogo className="mb-8" />
-        <p className="text-xl">Error: Game in inconsistent state. Please restart.</p>
-         <Button onClick={() => { resetGameStates(); setGamePhase('TITLE_SCREEN'); }} className="mt-4">Restart</Button>
-      </main>
-    );
-  }
-
-
-  const isStartTimerButtonDisabled = areAnswersVisible || answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
-  const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive || !areAnswersVisible;
-
+  // Fallback for any unhandled gamePhase - should not be reached if all phases are covered
   return (
-    <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
-      <header className="w-full mb-2 md:mb-4 flex flex-col items-center">
-        <GameLogo size="small" />
-        {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} />}
-        
-      </header>
-
-      {currentQuestion && (
-        <div className="w-full mb-4 md:mb-6">
-          <QuestionDisplay
-            question={currentQuestion}
-            onAnswerSelect={() => {}}
-            selectedAnswer={selectedAnswer}
-            isAnswerDisabled={generalAnswerButtonDisabledCondition}
-          />
-        </div>
-      )}
-
-      {currentQuestion && (
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
-          {currentQuestion.options.map((option, index) => (
-            <AnswerButton
-              key={index}
-              index={index}
-              optionText={option}
-              onClick={() => handleAnswerSelect(index)}
-              disabledForInteraction={generalAnswerButtonDisabledCondition}
-              isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
-              isSelected={selectedAnswer === index}
-              isCorrect={index === currentQuestion.correctAnswerIndex}
-              isVisible={areAnswersVisible}
-              isTimerActive={timerActive && timerManuallyStartedThisTurn}
-              canSelect={timerManuallyStartedThisTurn && areAnswersVisible && !answerRevealed}
-            />
-          ))}
-        </div>
-      )}
-
-      {answerRevealed && gamePhase === 'PLAYING' && !isLifelineDialogActive && (
-          <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
-            <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
-              Continue <ChevronRight className="ml-2 w-5 h-5" />
-            </Button>
-          </div>
-      )}
-
-      <div className="w-full md:w-3/4 lg:w-2/3">
-        <LifelineControls
-          activeTeam={activeTeam}
-          onUseLifeline={handleUseLifeline}
-          disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam') || isLifelineDialogActive}
-        />
-        <div className="mt-6">
-          <Scoreboard teams={teams} activeTeamId={activeTeam?.id} />
-        </div>
-      </div>
-
-
-      <Dialog open={showTeamPoll} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('askYourTeam'); else setShowTeamPoll(true); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Ask Your Team</DialogTitle>
-          </DialogHeader>
-          <DialogDescription className="my-4 text-lg text-center">
-            Confer with your team.
-          </DialogDescription>
-          <div className="my-6 flex flex-col items-center space-y-4">
-            <div className="text-6xl font-bold text-primary flex items-center">
-              <TimerIcon className="w-12 h-12 mr-3"/>
-              {askTeamLifelineTimer}s
-            </div>
-            <Button
-              onClick={() => {
-                if (askTeamLifelineTimer > 0 && !askTeamLifelineTimerActive) {
-                  setAskTeamLifelineTimerActive(true);
-                }
-              }}
-              disabled={askTeamLifelineTimerActive || askTeamLifelineTimer === 0}
-              size="lg"
-              className="w-full"
-            >
-              {askTeamLifelineTimer === 0 ? "Time Up" : (askTeamLifelineTimerActive ? "Timer Running..." : `Start ${LIFELINE_DIALOG_DURATION}s Timer`)}
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => closeLifelineDialog('askYourTeam')}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showPhoneAFriend} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('phoneAFriend'); else setShowPhoneAFriend(true); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Phone a Friend</DialogTitle>
-          </DialogHeader>
-          <DialogDescription className="my-4 text-lg text-center">
-            You have {LIFELINE_DIALOG_DURATION} seconds to 'call' your friend.
-          </DialogDescription>
-           <div className="my-6 flex flex-col items-center space-y-4">
-            <div className="text-6xl font-bold text-primary flex items-center">
-              <TimerIcon className="w-12 h-12 mr-3"/>
-              {phoneAFriendLifelineTimer}s
-            </div>
-            <Button
-              onClick={() => {
-                 if (phoneAFriendLifelineTimer > 0 && !phoneAFriendLifelineTimerActive) {
-                    setPhoneAFriendLifelineTimerActive(true);
-                 }
-              }}
-              disabled={phoneAFriendLifelineTimerActive || phoneAFriendLifelineTimer === 0}
-              size="lg"
-              className="w-full"
-            >
-              {phoneAFriendLifelineTimer === 0 ? "Time Up" : (phoneAFriendLifelineTimerActive ? "Timer Running..." : `Start ${LIFELINE_DIALOG_DURATION}s Timer`)}
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => closeLifelineDialog('phoneAFriend')}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    <main className="flex-grow flex flex-col items-center justify-center p-4">
+      <p className="text-white text-xl">Unknown Game Phase: {gamePhase}</p>
+      <Button onClick={() => setGamePhase('TITLE_SCREEN')} className="mt-4">Go to Title</Button>
     </main>
   );
 }

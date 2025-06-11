@@ -1,4 +1,3 @@
-
 export interface Question {
   id: string;
   text: string;
@@ -20,4 +19,4 @@ export interface Team {
   };
 }
 
-export type GamePhase = 'TITLE_SCREEN' | 'HOST_INTRODUCTION' | 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';
+export type GamePhase = 'TITLE_SCREEN' | 'HOST_INTRODUCTION' | 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER' | 'SCOREBOARD';

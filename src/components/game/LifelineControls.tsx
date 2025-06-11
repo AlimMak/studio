@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Phone, Users, XCircle } from 'lucide-react'; // Replaced MessageCircleQuestion with Users
@@ -41,9 +40,6 @@ const LifelineControls: React.FC<LifelineControlsProps> = ({ activeTeam, onUseLi
         </Button>
         {typeof label === 'string' && label.length > 0 && !isLifelineUsed && (
              <span className="mt-1 text-xs text-foreground">{label}</span>
-        )}
-         {isLifelineUsed && (
-             <span className="mt-1 text-xs text-destructive">(Used)</span>
         )}
       </div>
     );
