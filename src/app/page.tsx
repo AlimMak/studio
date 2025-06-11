@@ -31,7 +31,7 @@ export default function CrorepatiChallengePage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
 
-  const [areAnswersVisible, setAreAnswersVisible] = useState(false); // State to control answer visibility
+  const [areAnswersVisible, setAreAnswersVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [timerManuallyStartedThisTurn, setTimerManuallyStartedThisTurn] = useState(false);
@@ -75,7 +75,7 @@ export default function CrorepatiChallengePage() {
     setTeams([]);
     setQuestions([]);
     setCurrentQuestionIndex(0);
- setActiveTeamIndex(0);
+    setActiveTeamIndex(0);
     setAreAnswersVisible(false);
     setTimeLeft(0);
     setTimerActive(false);
@@ -101,7 +101,7 @@ export default function CrorepatiChallengePage() {
         if (!timerTickAudioRef.current.paused) {
             timerTickAudioRef.current.pause();
         }
-        timerTickAudioRef.current.currentTime = 0; 
+        timerTickAudioRef.current.currentTime = 0;
     }
     if (isBackgroundAudioInitialized && backgroundMusicAudioRef.current) {
         if (!backgroundMusicAudioRef.current.paused) {
@@ -122,7 +122,7 @@ export default function CrorepatiChallengePage() {
   }, []);
 
   const handleStartGame = useCallback((teamNames: string[]) => {
-    if (gamePhase !== 'SETUP') { 
+    if (gamePhase !== 'SETUP') {
       resetGameStates();
     }
     const newTeams: Team[] = teamNames.map((name, index) => ({
@@ -154,7 +154,6 @@ export default function CrorepatiChallengePage() {
       setIsAudioInitialized(true);
     };
     const handleError = (e: Event) => {
-      console.error("Audio: Error loading timer tick audio:", e);
       setIsAudioInitialized(false);
     };
 
@@ -177,7 +176,7 @@ export default function CrorepatiChallengePage() {
               tracks.forEach((track: MediaStreamTrack) => track.stop());
             }
         } catch (e) {
-            console.warn("Audio: Error stopping media tracks for timer tick", e);
+            // console.warn("Audio: Error stopping media tracks for timer tick", e);
         }
         timerTickAudioRef.current.srcObject = null;
         timerTickAudioRef.current.src = '';
@@ -196,13 +195,12 @@ export default function CrorepatiChallengePage() {
       setIsBackgroundAudioInitialized(true);
     };
     const handleBgError = (e: Event) => {
-      console.error("Audio: Error loading background music:", e);
       setIsBackgroundAudioInitialized(false);
     };
 
     bgAudio.addEventListener('canplaythrough', handleBgCanPlay);
     bgAudio.addEventListener('error', handleBgError);
-    bgAudio.load(); 
+    bgAudio.load();
 
     return () => {
       if (backgroundMusicAudioRef.current) {
@@ -219,11 +217,11 @@ export default function CrorepatiChallengePage() {
             tracks.forEach((track: MediaStreamTrack) => track.stop());
           }
         } catch (e) {
-            console.warn("Audio: Error stopping media tracks for background music", e);
+            // console.warn("Audio: Error stopping media tracks for background music", e);
         }
         backgroundMusicAudioRef.current.srcObject = null;
-        backgroundMusicAudioRef.current.src = ''; 
-        backgroundMusicAudioRef.current.load(); 
+        backgroundMusicAudioRef.current.src = '';
+        backgroundMusicAudioRef.current.load();
         backgroundMusicAudioRef.current = null;
       }
       setIsBackgroundAudioInitialized(false);
@@ -238,12 +236,12 @@ export default function CrorepatiChallengePage() {
     if (gamePhase === 'TITLE_SCREEN') {
       backgroundMusicAudioRef.current.loop = true;
       backgroundMusicAudioRef.current.play().catch(error => {
-        console.warn("Audio: Background music playback failed (possibly due to autoplay restrictions). User interaction might be needed.", error);
+        // console.warn("Audio: Background music playback failed (possibly due to autoplay restrictions). User interaction might be needed.", error);
       });
     } else {
       if (backgroundMusicAudioRef.current && !backgroundMusicAudioRef.current.paused) {
         backgroundMusicAudioRef.current.pause();
-        backgroundMusicAudioRef.current.currentTime = 0; 
+        backgroundMusicAudioRef.current.currentTime = 0;
       }
     }
   }, [gamePhase, isBackgroundAudioInitialized]);
@@ -259,7 +257,6 @@ export default function CrorepatiChallengePage() {
               const variation = await generateQuestionVariation({ question: q.text });
               return { ...q, text: variation.variedQuestion, originalText: q.text };
             } catch (error) {
-              console.error("Failed to vary question:", error);
               toast({
                 title: "AI Question Error",
                 description: "Could not vary a question. Using original.",
@@ -298,76 +295,103 @@ export default function CrorepatiChallengePage() {
            questionsJustLoaded
       ) {
          isNewTurnInitialization = true;
- }
+      }
     }
-    
+
     if (isNewTurnInitialization) {
         if (isAudioInitialized && timerTickAudioRef.current) {
             if (!timerTickAudioRef.current.paused) {
                 timerTickAudioRef.current.pause();
             }
-           timerTickAudioRef.current.currentTime = 0; 
+           timerTickAudioRef.current.currentTime = 0;
         }
 
         setTimeLeft(currentQuestion.timeLimit);
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
-        setAnswerRevealed(false); 
+        setAnswerRevealed(false);
         setSelectedAnswer(null);
-        setTimerActive(false); 
- setAreAnswersVisible(false); // Hide answers on new question
-        setTimerManuallyStartedThisTurn(false); 
+        setTimerActive(false);
+        setAreAnswersVisible(false);
+        setTimerManuallyStartedThisTurn(false);
 
     } else if (gamePhase === 'TITLE_SCREEN' || gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
             timerTickAudioRef.current.pause();
         }
-        setTimerActive(false); 
+        setTimerActive(false);
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
-        if(timerActive) { 
+        if(timerActive) {
             if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
                 timerTickAudioRef.current.pause();
             }
-            setTimerActive(false); 
+            setTimerActive(false);
         }
     }
-    
+
     if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
       prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
       prevActiveTeamIndexRef.current = activeTeamIndex;
     }
- 
+
   }, [
-    gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
-    isLifelineDialogActive, activeTeam, answerRevealed, isAudioInitialized
- , areAnswersVisible
+    gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length,
+    isLifelineDialogActive, activeTeam, answerRevealed, isAudioInitialized, areAnswersVisible
   ]);
 
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (!timerManuallyStartedThisTurn && optionIndex !== null ) { 
+    if (!timerManuallyStartedThisTurn && optionIndex !== null) {
       return;
     }
-    console.log("Answer selected: ", optionIndex);
-    if (!areAnswersVisible) return; // Only allow selecting if answers are visible
+    if (!areAnswersVisible || !currentQuestion || !activeTeam) return; // Guard against missing data
+
     setSelectedAnswer(optionIndex);
+
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
     }
+    setTimerActive(false); // Explicitly stop the timer
     setAnswerRevealed(true);
 
-    const isCorrect = currentQuestion && optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
+    const isCorrect = optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
 
-  }, [timerManuallyStartedThisTurn, currentQuestion, isAudioInitialized, areAnswersVisible]);
+    if (isCorrect) {
+      const pointsWon = currentQuestion.moneyValue;
+      setTeams(prevTeams =>
+        prevTeams.map(team =>
+          team.id === activeTeam.id
+            ? { ...team, score: team.score + pointsWon }
+            : team
+        )
+      );
+      toast({
+        title: "Correct!",
+        description: `You've won $${pointsWon.toLocaleString()}!`,
+        variant: "success",
+        duration: 3000,
+      });
+    } else {
+      toast({
+        title: "Incorrect",
+        description: "Better luck next time!",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  }, [
+      timerManuallyStartedThisTurn, currentQuestion, activeTeam, isAudioInitialized,
+      areAnswersVisible, toast
+  ]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
 
     const nextQuestionIndexToUse = currentQuestionIndex + 1;
-    
+
     if (nextQuestionIndexToUse < questions.length) {
-      setCurrentQuestionIndex(nextQuestionIndexToUse); 
+      setCurrentQuestionIndex(nextQuestionIndexToUse);
     } else {
       setGamePhase('GAME_OVER');
     }
@@ -382,22 +406,22 @@ export default function CrorepatiChallengePage() {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
 
-      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) { 
+      if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.play().catch(error => {
-            console.error("Audio: Playback error in timer useEffect:", error);
+            // console.error("Audio: Playback error in timer useEffect:", error);
         });
       }
-    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0 && timerManuallyStartedThisTurn) { 
+    } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0 && timerManuallyStartedThisTurn) {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
       }
-      handleAnswerSelect(null); 
-    } else { 
+      handleAnswerSelect(null); // Time's up, treat as incorrect (or no answer)
+    } else {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
       }
     }
-    
+
     return () => {
       clearInterval(intervalId);
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
@@ -443,15 +467,15 @@ export default function CrorepatiChallengePage() {
     setTeams(newTeams);
 
     if (type === 'fiftyFifty') {
-      setFiftyFiftyUsedThisTurn(true); 
+      setFiftyFiftyUsedThisTurn(true);
       const correctAnswer = currentQuestion.correctAnswerIndex;
       const incorrectOptions = currentQuestion.options
         .map((_, i) => i)
         .filter(i => i !== correctAnswer);
 
       const optionsToHide: number[] = [];
-      
-      const numToHide = Math.min(2, incorrectOptions.length); 
+
+      const numToHide = Math.min(2, incorrectOptions.length);
       while(optionsToHide.length < numToHide && incorrectOptions.length > 0) {
           const randomIndex = Math.floor(Math.random() * incorrectOptions.length);
           const optionToHide = incorrectOptions.splice(randomIndex, 1)[0];
@@ -463,18 +487,18 @@ export default function CrorepatiChallengePage() {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
       }
-      setMainTimerWasActiveBeforeLifeline(timerActive); 
-      setTimerActive(false); 
+      setMainTimerWasActiveBeforeLifeline(timerActive);
+      setTimerActive(false);
       setIsLifelineDialogActive(true);
 
       if (type === 'phoneAFriend') {
         setPhoneAFriendLifelineTimer(LIFELINE_DIALOG_DURATION);
-        setPhoneAFriendLifelineTimerActive(false); 
+        setPhoneAFriendLifelineTimerActive(false);
         setShowPhoneAFriend(true);
         toast({ title: "Phone a Friend Used!", description: "Dialog open. Start the timer when ready." });
-      } else { 
+      } else {
         setAskTeamLifelineTimer(LIFELINE_DIALOG_DURATION);
-        setAskTeamLifelineTimerActive(false); 
+        setAskTeamLifelineTimerActive(false);
         setShowTeamPoll(true);
         toast({ title: "Ask Your Team Used!", description: "Dialog open. Start the timer when ready." });
       }
@@ -484,36 +508,36 @@ export default function CrorepatiChallengePage() {
   const closeLifelineDialog = (type: 'askYourTeam' | 'phoneAFriend') => {
     if (type === 'askYourTeam') {
       setShowTeamPoll(false);
-      setAskTeamLifelineTimerActive(false); 
-    } else { 
+      setAskTeamLifelineTimerActive(false);
+    } else {
       setShowPhoneAFriend(false);
-      setPhoneAFriendLifelineTimerActive(false); 
+      setPhoneAFriendLifelineTimerActive(false);
     }
-    
+
     setIsLifelineDialogActive(false);
 
     if (mainTimerWasActiveBeforeLifeline && timerManuallyStartedThisTurn && currentQuestion && !answerRevealed && timeLeft > 0) {
-      setTimerActive(true); 
+      setTimerActive(true);
     }
-    setMainTimerWasActiveBeforeLifeline(false); 
+    setMainTimerWasActiveBeforeLifeline(false);
   };
 
 
   const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => {
       if(!activeTeam) return true;
-      if (answerRevealed) return true; 
-      if (type === 'fiftyFifty' && !areAnswersVisible) return true; // Cannot use 50:50 before revealing answers
+      if (answerRevealed) return true;
+      if (type === 'fiftyFifty' && !areAnswersVisible) return true;
       if (type === 'fiftyFifty' ) {
           return !activeTeam.lifelines.fiftyFifty || fiftyFiftyUsedThisTurn;
       }
-      if (isLifelineDialogActive) return true; 
+      if (isLifelineDialogActive) return true;
       return !activeTeam.lifelines[type];
   }
 
   const handleStartManualTimer = () => {
     if (!answerRevealed && timeLeft > 0 && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
       if (isAudioInitialized && timerTickAudioRef.current) {
-        timerTickAudioRef.current.currentTime = 0; 
+        timerTickAudioRef.current.currentTime = 0;
       }
       setTimerActive(true);
       setTimerManuallyStartedThisTurn(true);
@@ -524,8 +548,8 @@ export default function CrorepatiChallengePage() {
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
         <GameLogo className="mb-12" />
-        <Button 
-          onClick={handleProceedToHostIntro} 
+        <Button
+          onClick={handleProceedToHostIntro}
           className="text-xl py-8 px-12 bg-accent hover:bg-accent/90 text-accent-foreground"
           size="lg"
         >
@@ -581,8 +605,8 @@ export default function CrorepatiChallengePage() {
         <h2 className="text-2xl font-semibold mb-4">Final Scores:</h2>
         <Scoreboard teams={sortedTeams} />
         <Button onClick={() => {
-          resetGameStates(); 
-          setGamePhase('TITLE_SCREEN'); 
+          resetGameStates();
+          setGamePhase('TITLE_SCREEN');
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
@@ -598,7 +622,7 @@ export default function CrorepatiChallengePage() {
       </main>
     );
   }
-  
+
   if (gamePhase === 'PLAYING' && (!currentQuestion || !activeTeam) ) {
      return (
       <main className="flex-grow flex flex-col items-center justify-center p-4">
@@ -611,7 +635,7 @@ export default function CrorepatiChallengePage() {
 
 
   const isStartTimerButtonDisabled = areAnswersVisible || answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
-  const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive;
+  const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive || !areAnswersVisible;
 
   return (
     <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
@@ -623,10 +647,10 @@ export default function CrorepatiChallengePage() {
         <div className="w-full mb-2 md:mb-4">
          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
         </div>
-        
+
         {!areAnswersVisible && !answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
-            <Button 
-                onClick={handleStartManualTimer} 
+            <Button
+                onClick={handleStartManualTimer}
                 disabled={isStartTimerButtonDisabled}
                 className="mb-4 bg-green-600 hover:bg-green-700 text-white"
                 size="lg"
@@ -639,14 +663,13 @@ export default function CrorepatiChallengePage() {
         <div className="w-full mb-4 md:mb-6">
           {currentQuestion && <QuestionDisplay
             question={currentQuestion}
-            onAnswerSelect={() => {}} 
+            onAnswerSelect={() => {}}
             selectedAnswer={selectedAnswer}
             revealAnswer={answerRevealed}
-            isAnswerDisabled={generalAnswerButtonDisabledCondition} 
+            isAnswerDisabled={generalAnswerButtonDisabledCondition}
           />}
         </div>
 
-        {/* Button to reveal answers */}
         {!areAnswersVisible && gamePhase === 'PLAYING' && timerManuallyStartedThisTurn && !answerRevealed && !isLifelineDialogActive && (
           <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
             <Button onClick={() => setAreAnswersVisible(true)} size="lg" className="text-lg py-3 px-8">
@@ -655,7 +678,6 @@ export default function CrorepatiChallengePage() {
           </div>
         )}
 
-        {/* Answer Buttons - conditionally rendered or styled based on areAnswersVisible */}
         {currentQuestion && (
 
           <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
@@ -669,7 +691,7 @@ export default function CrorepatiChallengePage() {
                 isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
                 isSelected={selectedAnswer === index}
                 isCorrect={index === currentQuestion.correctAnswerIndex}
-                isVisible={areAnswersVisible} // Pass the visibility state
+                isVisible={areAnswersVisible}
               />
             ))}
           </div>
@@ -696,7 +718,6 @@ export default function CrorepatiChallengePage() {
       </div>
 
 
-      {/* Ask Your Team Dialog */}
       <Dialog open={showTeamPoll} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('askYourTeam'); else setShowTeamPoll(true); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -712,7 +733,7 @@ export default function CrorepatiChallengePage() {
             </div>
             <Button
               onClick={() => {
-                if (askTeamLifelineTimer > 0 && !askTeamLifelineTimerActive) { 
+                if (askTeamLifelineTimer > 0 && !askTeamLifelineTimerActive) {
                   setAskTeamLifelineTimerActive(true);
                 }
               }}
@@ -729,7 +750,6 @@ export default function CrorepatiChallengePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Phone a Friend Dialog */}
       <Dialog open={showPhoneAFriend} onOpenChange={(isOpen) => { if(!isOpen) closeLifelineDialog('phoneAFriend'); else setShowPhoneAFriend(true); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -745,7 +765,7 @@ export default function CrorepatiChallengePage() {
             </div>
             <Button
               onClick={() => {
-                 if (phoneAFriendLifelineTimer > 0 && !phoneAFriendLifelineTimerActive) { 
+                 if (phoneAFriendLifelineTimer > 0 && !phoneAFriendLifelineTimerActive) {
                     setPhoneAFriendLifelineTimerActive(true);
                  }
               }}
@@ -765,4 +785,4 @@ export default function CrorepatiChallengePage() {
   );
 }
 
-
+    
