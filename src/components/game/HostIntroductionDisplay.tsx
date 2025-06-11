@@ -33,7 +33,7 @@ const HostIntroductionDisplay: React.FC<HostIntroductionDisplayProps> = ({ onPro
               An electrifying game of wits and teamwork awaits!
             </p>
             <p className="text-center text-muted-foreground">
-              Behind every great game is a great guide. Click below to meet yours.
+              Behind every great game is a great guide. Are you ready to meet yours?
             </p>
           </>
         ) : (

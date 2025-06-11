@@ -92,9 +92,13 @@ export default function CrorepatiChallengePage() {
     prevCurrentQuestionIndexRef.current = undefined;
     prevActiveTeamIndexRef.current = undefined;
 
-    if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing audio on game state reset.");
-        timerTickAudioRef.current.pause();
+    if (isAudioInitialized && timerTickAudioRef.current) {
+        if (!timerTickAudioRef.current.paused) {
+            console.log("Audio: Pausing audio on game state reset.");
+            timerTickAudioRef.current.pause();
+        }
+        timerTickAudioRef.current.currentTime = 0; 
+        console.log("Audio: Setting currentTime to 0 on game state reset.");
     }
   }, [isAudioInitialized]);
 
@@ -217,7 +221,7 @@ export default function CrorepatiChallengePage() {
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && activeTeam) {
       const gameJustStarted = (prevGamePhaseRef.current === 'RULES') && gamePhase === 'PLAYING';
       const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex && prevCurrentQuestionIndexRef.current !== undefined;
-      const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion && (prevGamePhaseRef.current === 'RULES');
+      const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion && (prevGamePhaseRef.current === 'RULES' || prevGamePhaseRef.current === 'SETUP');
 
 
       if ( (gameJustStarted && !!currentQuestion) ||

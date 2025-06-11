@@ -42,7 +42,7 @@ const RulesDisplay: React.FC<RulesDisplayProps> = ({ onProceed }) => {
           <li><strong>NO HELP</strong> from the audience is allowed unless the audience poll is being used</li>
           <li><strong>NO CELL PHONE USE WILL BE ALLOWED</strong></li>
         </ul>
-        <p className="font-semibold text-center pt-2">Good luck to all teams!</p>
+        <p className="font-semibold text-center pt-2"><strong>Good Luck to All Teams!</strong></p>
       </CardContent>
       <CardFooter className="p-6">
         <Button onClick={onProceed} className="w-full text-lg py-6 bg-accent hover:bg-accent/90 text-accent-foreground">
