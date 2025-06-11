@@ -31,6 +31,7 @@ export default function CrorepatiChallengePage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
 
+  const [areAnswersVisible, setAreAnswersVisible] = useState(false); // State to control answer visibility
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [timerManuallyStartedThisTurn, setTimerManuallyStartedThisTurn] = useState(false);
@@ -74,7 +75,8 @@ export default function CrorepatiChallengePage() {
     setTeams([]);
     setQuestions([]);
     setCurrentQuestionIndex(0);
-    setActiveTeamIndex(0);
+ setActiveTeamIndex(0);
+    setAreAnswersVisible(false);
     setTimeLeft(0);
     setTimerActive(false);
     setTimerManuallyStartedThisTurn(false);
@@ -296,7 +298,7 @@ export default function CrorepatiChallengePage() {
            questionsJustLoaded
       ) {
          isNewTurnInitialization = true;
-      }
+ }
     }
     
     if (isNewTurnInitialization) {
@@ -313,6 +315,7 @@ export default function CrorepatiChallengePage() {
         setAnswerRevealed(false); 
         setSelectedAnswer(null);
         setTimerActive(false); 
+ setAreAnswersVisible(false); // Hide answers on new question
         setTimerManuallyStartedThisTurn(false); 
 
     } else if (gamePhase === 'TITLE_SCREEN' || gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
@@ -334,10 +337,11 @@ export default function CrorepatiChallengePage() {
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
       prevActiveTeamIndexRef.current = activeTeamIndex;
     }
-
+ 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length, 
     isLifelineDialogActive, activeTeam, answerRevealed, isAudioInitialized
+ , areAnswersVisible
   ]);
 
 
@@ -345,6 +349,8 @@ export default function CrorepatiChallengePage() {
     if (!timerManuallyStartedThisTurn && optionIndex !== null ) { 
       return;
     }
+    console.log("Answer selected: ", optionIndex);
+    if (!areAnswersVisible) return; // Only allow selecting if answers are visible
     setSelectedAnswer(optionIndex);
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
@@ -353,7 +359,7 @@ export default function CrorepatiChallengePage() {
 
     const isCorrect = currentQuestion && optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
 
-  }, [timerManuallyStartedThisTurn, currentQuestion, isAudioInitialized]);
+  }, [timerManuallyStartedThisTurn, currentQuestion, isAudioInitialized, areAnswersVisible]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
     if (!answerRevealed || gamePhase !== 'PLAYING') return;
@@ -496,7 +502,8 @@ export default function CrorepatiChallengePage() {
   const disabledLifeline = (type: 'fiftyFifty' | 'phoneAFriend' | 'askYourTeam'): boolean => {
       if(!activeTeam) return true;
       if (answerRevealed) return true; 
-      if (type === 'fiftyFifty') {
+      if (type === 'fiftyFifty' && !areAnswersVisible) return true; // Cannot use 50:50 before revealing answers
+      if (type === 'fiftyFifty' ) {
           return !activeTeam.lifelines.fiftyFifty || fiftyFiftyUsedThisTurn;
       }
       if (isLifelineDialogActive) return true; 
@@ -603,7 +610,7 @@ export default function CrorepatiChallengePage() {
   }
 
 
-  const isStartTimerButtonDisabled = answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
+  const isStartTimerButtonDisabled = areAnswersVisible || answerRevealed || timerManuallyStartedThisTurn || timeLeft === 0 || (currentQuestion && currentQuestion.timeLimit === 0) || isLifelineDialogActive;
   const generalAnswerButtonDisabledCondition = answerRevealed || !timerManuallyStartedThisTurn || timeLeft === 0 || isLifelineDialogActive;
 
   return (
@@ -617,7 +624,7 @@ export default function CrorepatiChallengePage() {
          {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
         </div>
         
-        {!answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
+        {!areAnswersVisible && !answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
             <Button 
                 onClick={handleStartManualTimer} 
                 disabled={isStartTimerButtonDisabled}
@@ -639,7 +646,18 @@ export default function CrorepatiChallengePage() {
           />}
         </div>
 
+        {/* Button to reveal answers */}
+        {!areAnswersVisible && gamePhase === 'PLAYING' && timerManuallyStartedThisTurn && !answerRevealed && !isLifelineDialogActive && (
+          <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
+            <Button onClick={() => setAreAnswersVisible(true)} size="lg" className="text-lg py-3 px-8">
+              Reveal Answers
+            </Button>
+          </div>
+        )}
+
+        {/* Answer Buttons - conditionally rendered or styled based on areAnswersVisible */}
         {currentQuestion && (
+
           <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
             {currentQuestion.options.map((option, index) => (
               <AnswerButton
@@ -651,7 +669,7 @@ export default function CrorepatiChallengePage() {
                 isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
                 isSelected={selectedAnswer === index}
                 isCorrect={index === currentQuestion.correctAnswerIndex}
-                reveal={answerRevealed}
+                isVisible={areAnswersVisible} // Pass the visibility state
               />
             ))}
           </div>

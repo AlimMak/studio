@@ -9,9 +9,9 @@ interface AnswerButtonProps extends React.HTMLAttributes<HTMLButtonElement> {
   disabledForInteraction?: boolean; // For general game state disabling
   isCorrect?: boolean;
   isSelected?: boolean;
-  reveal?: boolean;
   index: number;
   isEliminatedByFiftyFifty?: boolean; // Specifically if 50:50 removed this
+  isVisible: boolean; // Added prop to control visibility of content
 }
 
 const optionLetters = ['A', 'B', 'C', 'D'];
@@ -23,13 +23,14 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
   isSelected,
   index,
   isEliminatedByFiftyFifty,
+  isVisible, // Moved before ...props
   ...props // Capture other button props like onClick
 }) => {
   const [isRevealed, setIsRevealed] = React.useState(false);
 
   const getShapeColors = () => {
-    if (reveal) {
-      if (isCorrect) return { fill: 'hsl(var(--success))', stroke: 'hsl(var(--success))', text: 'text-success-foreground' };
+    if (isRevealed) {
+ if (isCorrect) return { fill: 'hsl(var(--success))', stroke: 'hsl(var(--success))', text: 'text-success-foreground' };
       if (isSelected && !isCorrect) return { fill: 'hsl(var(--destructive))', stroke: 'hsl(var(--destructive))', text: 'text-destructive-foreground' };
       return { fill: 'hsl(var(--muted))', stroke: 'hsl(var(--muted-foreground))', text: 'text-muted-foreground' }; // Revealed, unselected, incorrect
     }
@@ -59,8 +60,8 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
         // OR if it's a revealed, unselected, incorrect option (and not already blurred by 50:50)
         (displayRevealedState && !isCorrect && !isSelected && !isEliminatedByFiftyFifty) && "opacity-70",
         // Animations
-        (reveal && isCorrect) && "animate-pulse-correct",
-        (reveal && isSelected && !isCorrect) && "animate-pulse-incorrect"
+        (displayRevealedState && isCorrect) && "animate-pulse-correct",
+        (displayRevealedState && isSelected && !isCorrect) && "animate-pulse-incorrect"
       )}
       aria-label={`Option ${optionLetters[index]}: ${optionText}`}
     >
@@ -75,13 +76,16 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
         <path d="M 15 0 L 285 0 L 300 25 L 285 50 L 15 50 L 0 25 Z"/>
       </svg>
       
-      <div className={cn("relative z-10 flex items-center w-full h-full px-4 md:px-6", textColor)}>
-        <div className="flex items-center mr-3 md:mr-4">
-          <Diamond className="w-3 h-3 md:w-4 md:h-4 text-white fill-white mr-2" />
-          <span className="font-bold text-sm md:text-base text-white">{optionLetters[index]}</span>
+      {/* Conditionally render content based on isVisible */}
+      {isVisible && (
+        <div className={cn("relative z-10 flex items-center w-full h-full px-4 md:px-6", textColor)}>
+          <div className="flex items-center mr-3 md:mr-4">
+            <Diamond className="w-3 h-3 md:w-4 md:h-4 text-white fill-white mr-2" />
+            <span className="font-bold text-sm md:text-base text-white">{optionLetters[index]}</span>
+          </div>
+          <span className="text-sm md:text-base text-left flex-1 truncate">{optionText}</span>
         </div>
-        <span className="text-sm md:text-base text-left flex-1 truncate">{optionText}</span>
-      </div>
+      )}
     </button>
   );
 };
