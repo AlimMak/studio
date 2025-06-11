@@ -30,7 +30,6 @@ export default function CrorepatiChallengePage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
-
   const [areAnswersVisible, setAreAnswersVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
@@ -76,7 +75,6 @@ export default function CrorepatiChallengePage() {
     setQuestions([]);
     setCurrentQuestionIndex(0);
     setActiveTeamIndex(0);
-    setAreAnswersVisible(false);
     setTimeLeft(0);
     setTimerActive(false);
     setTimerManuallyStartedThisTurn(false);
@@ -308,10 +306,9 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyOptions(null);
         setAnswerRevealed(false);
         setSelectedAnswer(null);
-        setTimerActive(false);
+ setTimerActive(false);
         setAreAnswersVisible(false);
-        setTimerManuallyStartedThisTurn(false);
-
+        setAreAnswersVisible(true); // Make answers visible by default
     } else if (gamePhase === 'TITLE_SCREEN' || gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
             timerTickAudioRef.current.pause();
@@ -326,11 +323,12 @@ export default function CrorepatiChallengePage() {
         }
     }
 
-    if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
-      prevGamePhaseRef.current = gamePhase;
+    if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase === 'question' || gamePhase !== 'PLAYING') {
+ prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
       prevActiveTeamIndexRef.current = activeTeamIndex;
-    }
+
+ }
 
   }, [
     gamePhase, currentQuestion, activeTeamIndex, currentQuestionIndex, teams.length,
@@ -341,10 +339,6 @@ export default function CrorepatiChallengePage() {
     if (optionIndex !== null) { // User selected an answer
         if (!timerManuallyStartedThisTurn) {
             toast({ title: "Timer Not Started", description: "Please start the timer before selecting an answer.", variant: "destructive", duration: 2000 });
-            return;
-        }
-        if (!areAnswersVisible) {
-            toast({ title: "Answers Not Revealed", description: "Please reveal answers before selecting.", variant: "destructive", duration: 2000 });
             return;
         }
     }
@@ -388,7 +382,7 @@ export default function CrorepatiChallengePage() {
     }
   }, [
       timerManuallyStartedThisTurn, currentQuestion, activeTeam, isAudioInitialized,
-      areAnswersVisible, toast // Removed timeLeft from dependencies as its direct check here could be problematic
+      toast // Removed timeLeft from dependencies as its direct check here could be problematic
   ]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
@@ -648,27 +642,6 @@ export default function CrorepatiChallengePage() {
         <GameLogo size="small" />
         {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} />}
         
-        <div className="my-4 flex flex-col items-center space-y-2 md:space-y-0 md:flex-row md:space-x-2">
-            {!areAnswersVisible && !answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
-                <Button
-                    onClick={handleStartManualTimer}
-                    disabled={isStartTimerButtonDisabled}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                    size="lg"
-                >
-                    <PlayIcon className="mr-2 h-5 w-5" /> Start Timer
-                </Button>
-            )}
-            {!areAnswersVisible && gamePhase === 'PLAYING' && (
-              <Button
-                onClick={() => setAreAnswersVisible(true)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
-              >
-                Reveal Answers
-              </Button>
-            )}
-        </div>
       </header>
 
       {currentQuestion && (
@@ -677,7 +650,6 @@ export default function CrorepatiChallengePage() {
             question={currentQuestion}
             onAnswerSelect={() => {}}
             selectedAnswer={selectedAnswer}
-            revealAnswer={answerRevealed}
             isAnswerDisabled={generalAnswerButtonDisabledCondition}
           />
         </div>

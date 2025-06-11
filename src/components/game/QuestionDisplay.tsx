@@ -6,7 +6,6 @@ interface QuestionDisplayProps {
   question: Question;
   onAnswerSelect: (optionIndex: number) => void; // Kept for consistency, though not used here
   selectedAnswer: number | null; // Kept for consistency
-  revealAnswer: boolean; // Kept for consistency
   disabledOptions?: number[]; // Kept for consistency
   isAnswerDisabled: boolean; // Kept for consistency
 }
