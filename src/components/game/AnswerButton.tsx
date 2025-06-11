@@ -3,7 +3,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Diamond } from 'lucide-react';
 
-interface AnswerButtonProps {
+interface AnswerButtonProps extends React.HTMLAttributes<HTMLButtonElement> {
   optionText: string;
   onClick: () => void;
   disabledForInteraction?: boolean; // For general game state disabling
@@ -16,16 +16,17 @@ interface AnswerButtonProps {
 
 const optionLetters = ['A', 'B', 'C', 'D'];
 
-const AnswerButton: React.FC<AnswerButtonProps> = ({
+const AnswerButton: React.FC<AnswerButtonProps> = ({ 
   optionText,
-  onClick,
   disabledForInteraction,
   isCorrect,
   isSelected,
-  reveal,
   index,
   isEliminatedByFiftyFifty,
+  ...props // Capture other button props like onClick
 }) => {
+  const [isRevealed, setIsRevealed] = React.useState(false);
+
   const getShapeColors = () => {
     if (reveal) {
       if (isCorrect) return { fill: 'hsl(var(--success))', stroke: 'hsl(var(--success))', text: 'text-success-foreground' };
@@ -38,22 +39,25 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
 
   const { fill, stroke, text: textColor } = getShapeColors();
 
+  // Use isRevealed instead of the prop
+  const displayRevealedState = isRevealed || (isSelected && !isCorrect); 
+
   // Determine if the button should be functionally disabled for clicks
-  const buttonShouldBeDisabled = 
+  const buttonShouldBeDisabled =
     disabledForInteraction || 
-    isEliminatedByFiftyFifty || 
-    (reveal && !isCorrect && !isSelected); // Disable unselected incorrect options after reveal
+    isEliminatedByFiftyFifty ||
+    (displayRevealedState && !isCorrect && !isSelected); // Disable unselected incorrect options after reveal
 
   return (
     <button
-      onClick={onClick}
+      onClick={() => setIsRevealed(true)} // Always reveal on click
       disabled={buttonShouldBeDisabled}
       className={cn(
         "w-full h-[60px] md:h-[70px] relative group transition-opacity duration-300",
         // Apply opacity ONLY if eliminated by 50:50
         isEliminatedByFiftyFifty && "opacity-50 cursor-not-allowed",
         // OR if it's a revealed, unselected, incorrect option (and not already blurred by 50:50)
-        (reveal && !isCorrect && !isSelected && !isEliminatedByFiftyFifty) && "opacity-70",
+        (displayRevealedState && !isCorrect && !isSelected && !isEliminatedByFiftyFifty) && "opacity-70",
         // Animations
         (reveal && isCorrect) && "animate-pulse-correct",
         (reveal && isSelected && !isCorrect) && "animate-pulse-incorrect"
@@ -68,7 +72,7 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
         stroke={stroke}
         strokeWidth="2"
       >
-        <path d="M 15 0 L 285 0 L 300 25 L 285 50 L 15 50 L 0 25 Z" />
+        <path d="M 15 0 L 285 0 L 300 25 L 285 50 L 15 50 L 0 25 Z"/>
       </svg>
       
       <div className={cn("relative z-10 flex items-center w-full h-full px-4 md:px-6", textColor)}>
