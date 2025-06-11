@@ -338,8 +338,7 @@ export default function CrorepatiChallengePage() {
   ]);
 
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    // If it's a user selection (not time up from timer)
-    if (optionIndex !== null) {
+    if (optionIndex !== null) { // User selected an answer
         if (!timerManuallyStartedThisTurn) {
             toast({ title: "Timer Not Started", description: "Please start the timer before selecting an answer.", variant: "destructive", duration: 2000 });
             return;
@@ -349,21 +348,18 @@ export default function CrorepatiChallengePage() {
             return;
         }
     }
+    // Fall through if optionIndex is null (time's up) or if above checks pass for user click
 
-    // Common checks for both user clicks and time-up, and proceed if critical data exists
     if (!currentQuestion || !activeTeam) {
-        // Log error or handle missing critical data, though this should ideally not happen in PLAYING phase
-        return;
+        return; // Should not happen if game is in PLAYING and question/team are set
     }
 
     setSelectedAnswer(optionIndex);
-
-    // Stop audio and timer immediately
+    setTimerActive(false); // Stop timer immediately
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        timerTickAudioRef.current.pause();
+        timerTickAudioRef.current.pause(); // Stop audio immediately
     }
-    setTimerActive(false); // This is key for stopping the interval via useEffect
-    setAnswerRevealed(true); // This is key for showing the "Continue" button
+    setAnswerRevealed(true); // Reveal correct/incorrect state and show "Continue" button
 
     const isCorrect = optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
 
@@ -382,7 +378,7 @@ export default function CrorepatiChallengePage() {
         variant: "success",
         duration: 3000,
       });
-    } else { // Incorrect or time ran out (optionIndex is null)
+    } else {
       toast({
         title: optionIndex === null ? "Time's Up!" : "Incorrect",
         description: "Better luck next time!",
@@ -392,7 +388,7 @@ export default function CrorepatiChallengePage() {
     }
   }, [
       timerManuallyStartedThisTurn, currentQuestion, activeTeam, isAudioInitialized,
-      areAnswersVisible, toast
+      areAnswersVisible, toast // Removed timeLeft from dependencies as its direct check here could be problematic
   ]);
 
   const proceedToNextTurnOrQuestion = useCallback(() => {
@@ -648,81 +644,81 @@ export default function CrorepatiChallengePage() {
 
   return (
     <main className="flex-grow container mx-auto p-4 flex flex-col items-center justify-center animate-fade-in-slow">
-      <header className="w-full mb-2 md:mb-4">
+      <header className="w-full mb-2 md:mb-4 flex flex-col items-center">
         <GameLogo size="small" />
+        {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} />}
+        
+        <div className="my-4 flex flex-col items-center space-y-2 md:space-y-0 md:flex-row md:space-x-2">
+            {!areAnswersVisible && !answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
+                <Button
+                    onClick={handleStartManualTimer}
+                    disabled={isStartTimerButtonDisabled}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="lg"
+                >
+                    <PlayIcon className="mr-2 h-5 w-5" /> Start Timer
+                </Button>
+            )}
+            {!areAnswersVisible && gamePhase === 'PLAYING' && (
+              <Button
+                onClick={() => setAreAnswersVisible(true)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                size="lg"
+              >
+                Reveal Answers
+              </Button>
+            )}
+        </div>
       </header>
 
-      <div className="w-full flex flex-col items-center max-w-3xl mx-auto">
-        <div className="w-full mb-2 md:mb-4">
-         {currentQuestion && <TimerDisplay timeLeft={timeLeft} maxTime={currentQuestion.timeLimit} /> }
-        </div>
-
-        {!areAnswersVisible && !answerRevealed && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive && (
-            <Button
-                onClick={handleStartManualTimer}
-                disabled={isStartTimerButtonDisabled}
-                className="mb-4 bg-green-600 hover:bg-green-700 text-white"
-                size="lg"
-            >
-                <PlayIcon className="mr-2 h-5 w-5" /> Start Timer
-            </Button>
-        )}
-
-
+      {currentQuestion && (
         <div className="w-full mb-4 md:mb-6">
-          {currentQuestion && <QuestionDisplay
+          <QuestionDisplay
             question={currentQuestion}
-            onAnswerSelect={() => {}} // This onAnswerSelect is not used by QuestionDisplay itself
+            onAnswerSelect={() => {}}
             selectedAnswer={selectedAnswer}
             revealAnswer={answerRevealed}
-            isAnswerDisabled={generalAnswerButtonDisabledCondition} // This prop is also for QuestionDisplay, not its internal buttons
-          />}
+            isAnswerDisabled={generalAnswerButtonDisabledCondition}
+          />
         </div>
+      )}
 
-        {!areAnswersVisible && gamePhase === 'PLAYING' && timerManuallyStartedThisTurn && !answerRevealed && !isLifelineDialogActive && (
+      {currentQuestion && (
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+          {currentQuestion.options.map((option, index) => (
+            <AnswerButton
+              key={index}
+              index={index}
+              optionText={option}
+              onClick={() => handleAnswerSelect(index)}
+              disabledForInteraction={generalAnswerButtonDisabledCondition}
+              isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
+              isSelected={selectedAnswer === index}
+              isCorrect={index === currentQuestion.correctAnswerIndex}
+              isVisible={areAnswersVisible}
+              isTimerActive={timerActive && timerManuallyStartedThisTurn}
+              canSelect={timerManuallyStartedThisTurn && areAnswersVisible && !answerRevealed}
+            />
+          ))}
+        </div>
+      )}
+
+      {answerRevealed && gamePhase === 'PLAYING' && !isLifelineDialogActive && (
           <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
-            <Button onClick={() => setAreAnswersVisible(true)} size="lg" className="text-lg py-3 px-8">
-              Reveal Answers
+            <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
+              Continue <ChevronRight className="ml-2 w-5 h-5" />
             </Button>
           </div>
-        )}
+      )}
 
-        {currentQuestion && (
-
-          <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
-            {currentQuestion.options.map((option, index) => (
-              <AnswerButton
-                key={index}
-                index={index}
-                optionText={option}
-                onClick={() => handleAnswerSelect(index)}
-                disabledForInteraction={generalAnswerButtonDisabledCondition}
-                isEliminatedByFiftyFifty={fiftyFiftyUsedThisTurn && (fiftyFiftyOptions?.includes(index) ?? false)}
-                isSelected={selectedAnswer === index}
-                isCorrect={index === currentQuestion.correctAnswerIndex}
-                isVisible={areAnswersVisible}
-              />
-            ))}
-          </div>
-        )}
-
-        {answerRevealed && gamePhase === 'PLAYING' && !isLifelineDialogActive && (
-            <div className="flex justify-center mt-2 md:mt-4 mb-4 md:mb-6">
-              <Button onClick={proceedToNextTurnOrQuestion} size="lg" className="text-lg py-3 px-8 bg-accent hover:bg-accent/90 text-accent-foreground">
-                Continue <ChevronRight className="ml-2 w-5 h-5" />
-              </Button>
-            </div>
-        )}
-
-        <div className="w-full md:w-3/4 lg:w-2/3">
-          <LifelineControls
-            activeTeam={activeTeam}
-            onUseLifeline={handleUseLifeline}
-            disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam') || isLifelineDialogActive}
-          />
-          <div className="mt-6">
-            <Scoreboard teams={teams} activeTeamId={activeTeam?.id} />
-          </div>
+      <div className="w-full md:w-3/4 lg:w-2/3">
+        <LifelineControls
+          activeTeam={activeTeam}
+          onUseLifeline={handleUseLifeline}
+          disabled={disabledLifeline('fiftyFifty') && disabledLifeline('phoneAFriend') && disabledLifeline('askYourTeam') || isLifelineDialogActive}
+        />
+        <div className="mt-6">
+          <Scoreboard teams={teams} activeTeamId={activeTeam?.id} />
         </div>
       </div>
 
@@ -793,3 +789,5 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
+
+    
