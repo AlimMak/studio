@@ -176,7 +176,6 @@ export default function CrorepatiChallengePage() {
               tracks.forEach((track: MediaStreamTrack) => track.stop());
             }
         } catch (e) {
-            // console.warn("Audio: Error stopping media tracks for timer tick", e);
         }
         timerTickAudioRef.current.srcObject = null;
         timerTickAudioRef.current.src = '';
@@ -217,7 +216,6 @@ export default function CrorepatiChallengePage() {
             tracks.forEach((track: MediaStreamTrack) => track.stop());
           }
         } catch (e) {
-            // console.warn("Audio: Error stopping media tracks for background music", e);
         }
         backgroundMusicAudioRef.current.srcObject = null;
         backgroundMusicAudioRef.current.src = '';
@@ -236,7 +234,6 @@ export default function CrorepatiChallengePage() {
     if (gamePhase === 'TITLE_SCREEN') {
       backgroundMusicAudioRef.current.loop = true;
       backgroundMusicAudioRef.current.play().catch(error => {
-        // console.warn("Audio: Background music playback failed (possibly due to autoplay restrictions). User interaction might be needed.", error);
       });
     } else {
       if (backgroundMusicAudioRef.current && !backgroundMusicAudioRef.current.paused) {
@@ -340,20 +337,33 @@ export default function CrorepatiChallengePage() {
     isLifelineDialogActive, activeTeam, answerRevealed, isAudioInitialized, areAnswersVisible
   ]);
 
-
   const handleAnswerSelect = useCallback((optionIndex: number | null) => {
-    if (!timerManuallyStartedThisTurn && optionIndex !== null) {
-      return;
+    // If it's a user selection (not time up from timer)
+    if (optionIndex !== null) {
+        if (!timerManuallyStartedThisTurn) {
+            toast({ title: "Timer Not Started", description: "Please start the timer before selecting an answer.", variant: "destructive", duration: 2000 });
+            return;
+        }
+        if (!areAnswersVisible) {
+            toast({ title: "Answers Not Revealed", description: "Please reveal answers before selecting.", variant: "destructive", duration: 2000 });
+            return;
+        }
     }
-    if (!areAnswersVisible || !currentQuestion || !activeTeam) return; // Guard against missing data
+
+    // Common checks for both user clicks and time-up, and proceed if critical data exists
+    if (!currentQuestion || !activeTeam) {
+        // Log error or handle missing critical data, though this should ideally not happen in PLAYING phase
+        return;
+    }
 
     setSelectedAnswer(optionIndex);
 
+    // Stop audio and timer immediately
     if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
     }
-    setTimerActive(false); // Explicitly stop the timer
-    setAnswerRevealed(true);
+    setTimerActive(false); // This is key for stopping the interval via useEffect
+    setAnswerRevealed(true); // This is key for showing the "Continue" button
 
     const isCorrect = optionIndex !== null && optionIndex === currentQuestion.correctAnswerIndex;
 
@@ -372,9 +382,9 @@ export default function CrorepatiChallengePage() {
         variant: "success",
         duration: 3000,
       });
-    } else {
+    } else { // Incorrect or time ran out (optionIndex is null)
       toast({
-        title: "Incorrect",
+        title: optionIndex === null ? "Time's Up!" : "Incorrect",
         description: "Better luck next time!",
         variant: "destructive",
         duration: 3000,
@@ -408,14 +418,13 @@ export default function CrorepatiChallengePage() {
 
       if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.play().catch(error => {
-            // console.error("Audio: Playback error in timer useEffect:", error);
         });
       }
     } else if (timerActive && timeLeft === 0 && !isLifelineDialogActive && !answerRevealed && currentQuestion && currentQuestion.timeLimit > 0 && timerManuallyStartedThisTurn) {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
       }
-      handleAnswerSelect(null); // Time's up, treat as incorrect (or no answer)
+      handleAnswerSelect(null); 
     } else {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
         timerTickAudioRef.current.pause();
@@ -663,10 +672,10 @@ export default function CrorepatiChallengePage() {
         <div className="w-full mb-4 md:mb-6">
           {currentQuestion && <QuestionDisplay
             question={currentQuestion}
-            onAnswerSelect={() => {}}
+            onAnswerSelect={() => {}} // This onAnswerSelect is not used by QuestionDisplay itself
             selectedAnswer={selectedAnswer}
             revealAnswer={answerRevealed}
-            isAnswerDisabled={generalAnswerButtonDisabledCondition}
+            isAnswerDisabled={generalAnswerButtonDisabledCondition} // This prop is also for QuestionDisplay, not its internal buttons
           />}
         </div>
 
@@ -784,5 +793,3 @@ export default function CrorepatiChallengePage() {
     </main>
   );
 }
-
-    
