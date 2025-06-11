@@ -39,7 +39,7 @@ const HostIntroductionDisplay: React.FC<HostIntroductionDisplayProps> = ({ onPro
           <>
             <div className="flex justify-center my-4 animate-fade-in">
               <Image
-                src="https://placehold.co/150x150.png" 
+                src="/host.jpg" 
                 alt="Host Portrait"
                 width={150} 
                 height={150} 
