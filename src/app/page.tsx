@@ -62,6 +62,9 @@ export default function CrorepatiChallengePage() {
   const timerTickAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
 
+  const backgroundMusicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isBackgroundAudioInitialized, setIsBackgroundAudioInitialized] = useState(false);
+
   const prevGamePhaseRef = useRef<GamePhase | undefined>();
   const prevCurrentQuestionIndexRef = useRef<number | undefined>();
   const prevActiveTeamIndexRef = useRef<number | undefined>();
@@ -94,13 +97,20 @@ export default function CrorepatiChallengePage() {
 
     if (isAudioInitialized && timerTickAudioRef.current) {
         if (!timerTickAudioRef.current.paused) {
-            console.log("Audio: Pausing audio on game state reset.");
+            console.log("Audio: Pausing timer audio on game state reset.");
             timerTickAudioRef.current.pause();
         }
         timerTickAudioRef.current.currentTime = 0; 
-        console.log("Audio: Setting currentTime to 0 on game state reset.");
+        console.log("Audio: Setting timer audio currentTime to 0 on game state reset.");
     }
-  }, [isAudioInitialized]);
+    if (isBackgroundAudioInitialized && backgroundMusicAudioRef.current) {
+        if (!backgroundMusicAudioRef.current.paused) {
+            console.log("Audio: Pausing background music on game state reset.");
+            backgroundMusicAudioRef.current.pause();
+        }
+        backgroundMusicAudioRef.current.currentTime = 0;
+    }
+  }, [isAudioInitialized, isBackgroundAudioInitialized]);
 
   const handleProceedToHostIntro = useCallback(() => {
     setGamePhase('HOST_INTRODUCTION');
@@ -137,17 +147,17 @@ export default function CrorepatiChallengePage() {
 
 
   useEffect(() => {
-    console.log("Audio: Initializing audio element");
+    console.log("Audio: Initializing timer tick audio element");
     const audio = new Audio('/sounds/timer-tick.mp3');
     audio.loop = true;
     timerTickAudioRef.current = audio;
 
     const handleCanPlay = () => {
       setIsAudioInitialized(true);
-      console.log("Audio: Ready to play (isAudioInitialized true)");
+      console.log("Audio: Timer tick ready to play (isAudioInitialized true)");
     };
     const handleError = (e: Event) => {
-      console.error("Audio: Error loading audio:", e);
+      console.error("Audio: Error loading timer tick audio:", e);
       setIsAudioInitialized(false);
     };
 
@@ -156,19 +166,22 @@ export default function CrorepatiChallengePage() {
     audio.load();
 
     return () => {
-      console.log("Audio: Cleaning up audio element");
+      console.log("Audio: Cleaning up timer tick audio element");
       if (timerTickAudioRef.current) {
         timerTickAudioRef.current.removeEventListener('canplaythrough', handleCanPlay);
         timerTickAudioRef.current.removeEventListener('error', handleError);
-        timerTickAudioRef.current.pause();
+        if (!timerTickAudioRef.current.paused) {
+            timerTickAudioRef.current.pause();
+        }
         try {
-            if (timerTickAudioRef.current.srcObject) {
+            // @ts-ignore
+            if (timerTickAudioRef.current.srcObject && timerTickAudioRef.current.srcObject.getTracks) {
               // @ts-ignore
               const tracks = timerTickAudioRef.current.srcObject.getTracks();
               tracks.forEach((track: MediaStreamTrack) => track.stop());
             }
         } catch (e) {
-            console.warn("Audio: Error stopping media tracks", e);
+            console.warn("Audio: Error stopping media tracks for timer tick", e);
         }
         timerTickAudioRef.current.srcObject = null;
         timerTickAudioRef.current.src = '';
@@ -178,6 +191,72 @@ export default function CrorepatiChallengePage() {
       setIsAudioInitialized(false);
     };
   }, []);
+
+  useEffect(() => {
+    console.log("Audio: Initializing background music element");
+    const bgAudio = new Audio('/sounds/background-music.mp3');
+    backgroundMusicAudioRef.current = bgAudio;
+
+    const handleBgCanPlay = () => {
+      setIsBackgroundAudioInitialized(true);
+      console.log("Audio: Background music ready to play (isBackgroundAudioInitialized true)");
+    };
+    const handleBgError = (e: Event) => {
+      console.error("Audio: Error loading background music:", e);
+      setIsBackgroundAudioInitialized(false);
+    };
+
+    bgAudio.addEventListener('canplaythrough', handleBgCanPlay);
+    bgAudio.addEventListener('error', handleBgError);
+    bgAudio.load(); 
+
+    return () => {
+      console.log("Audio: Cleaning up background music element");
+      if (backgroundMusicAudioRef.current) {
+        backgroundMusicAudioRef.current.removeEventListener('canplaythrough', handleBgCanPlay);
+        backgroundMusicAudioRef.current.removeEventListener('error', handleBgError);
+        if (!backgroundMusicAudioRef.current.paused) {
+          backgroundMusicAudioRef.current.pause();
+        }
+        try {
+            // @ts-ignore
+          if (backgroundMusicAudioRef.current.srcObject && backgroundMusicAudioRef.current.srcObject.getTracks) {
+             // @ts-ignore
+            const tracks = backgroundMusicAudioRef.current.srcObject.getTracks();
+            tracks.forEach((track: MediaStreamTrack) => track.stop());
+          }
+        } catch (e) {
+            console.warn("Audio: Error stopping media tracks for background music", e);
+        }
+        backgroundMusicAudioRef.current.srcObject = null;
+        backgroundMusicAudioRef.current.src = ''; 
+        backgroundMusicAudioRef.current.load(); 
+        backgroundMusicAudioRef.current = null;
+      }
+      setIsBackgroundAudioInitialized(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isBackgroundAudioInitialized || !backgroundMusicAudioRef.current) {
+      return;
+    }
+
+    if (gamePhase === 'TITLE_SCREEN') {
+      console.log("Audio: Attempting to play background music.");
+      backgroundMusicAudioRef.current.loop = true;
+      backgroundMusicAudioRef.current.play().catch(error => {
+        console.warn("Audio: Background music playback failed (possibly due to autoplay restrictions). User interaction might be needed.", error);
+      });
+    } else {
+      if (backgroundMusicAudioRef.current && !backgroundMusicAudioRef.current.paused) {
+        console.log("Audio: Pausing background music.");
+        backgroundMusicAudioRef.current.pause();
+        backgroundMusicAudioRef.current.currentTime = 0; 
+      }
+    }
+  }, [gamePhase, isBackgroundAudioInitialized]);
+
 
   const loadQuestions = useCallback(async () => {
     const baseQuestions = getQuestions();
@@ -219,10 +298,9 @@ export default function CrorepatiChallengePage() {
     let isNewTurnInitialization = false;
 
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && activeTeam) {
-      const gameJustStarted = (prevGamePhaseRef.current === 'RULES') && gamePhase === 'PLAYING';
+      const gameJustStarted = (prevGamePhaseRef.current === 'RULES' || prevGamePhaseRef.current === 'SETUP') && gamePhase === 'PLAYING';
       const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex && prevCurrentQuestionIndexRef.current !== undefined;
       const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion && (prevGamePhaseRef.current === 'RULES' || prevGamePhaseRef.current === 'SETUP');
-
 
       if ( (gameJustStarted && !!currentQuestion) ||
            (questionIndexChanged && !!currentQuestion) ||
@@ -332,6 +410,7 @@ export default function CrorepatiChallengePage() {
 
       if (isAudioInitialized && timerTickAudioRef.current && timerTickAudioRef.current.paused) { 
         console.log(`Audio: Attempting to play timer tick from timer useEffect. Current time: ${timerTickAudioRef.current.currentTime}`);
+        // No currentTime=0 here
         timerTickAudioRef.current.play().catch(error => {
             console.error("Audio: Playback error in timer useEffect:", error);
         });
@@ -414,7 +493,7 @@ export default function CrorepatiChallengePage() {
       toast({ title: "50:50 Used!", description: "Two incorrect options removed." });
     } else if (type === 'phoneAFriend' || type === 'askYourTeam') {
       if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-        console.log("Audio: Pausing audio (lifeline used).");
+        console.log("Audio: Pausing timer audio (lifeline used).");
         timerTickAudioRef.current.pause();
       }
       setMainTimerWasActiveBeforeLifeline(timerActive); 
@@ -467,10 +546,11 @@ export default function CrorepatiChallengePage() {
     if (!answerRevealed && timeLeft > 0 && !timerManuallyStartedThisTurn && currentQuestion && currentQuestion.timeLimit > 0 && !isLifelineDialogActive) {
       if (isAudioInitialized && timerTickAudioRef.current) {
         timerTickAudioRef.current.currentTime = 0; 
-        console.log("Audio: Setting currentTime to 0 for manual start.");
+        console.log("Audio: Setting timer audio currentTime to 0 for manual start.");
       }
       setTimerActive(true);
       setTimerManuallyStartedThisTurn(true);
+      // Play will be handled by the useEffect listening to timerActive
     }
   };
 
@@ -519,6 +599,9 @@ export default function CrorepatiChallengePage() {
 
   if (gamePhase === 'GAME_OVER') {
     const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
+    if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
+        timerTickAudioRef.current.pause();
+    }
     return (
       <main className="flex-grow flex flex-col items-center justify-center p-4 text-center animate-fade-in">
         <GameLogo className="mb-6" />
@@ -533,7 +616,7 @@ export default function CrorepatiChallengePage() {
         <Scoreboard teams={sortedTeams} />
         <Button onClick={() => {
           resetGameStates(); 
-          setGamePhase('SETUP'); 
+          setGamePhase('TITLE_SCREEN'); 
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
         </Button>
