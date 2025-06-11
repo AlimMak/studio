@@ -21,19 +21,26 @@ const RulesDisplay: React.FC<RulesDisplayProps> = ({ onProceed }) => {
       <CardContent className="space-y-4 text-card-foreground px-6 md:px-8">
         <p className="text-lg">Welcome to the Team Crorepati Challenge!</p>
         <ul className="list-disc list-inside space-y-2 pl-4">
-          <li>Each team will face a series of multiple-choice questions.</li>
-          <li>Each question has a monetary value and a time limit. The time limit decreases as the money value increases.</li>
+          <li>Each team will face a series of multiple-choice questions.
+            <ul className="list-decimal list-inside space-y-1 pl-6 mt-1">
+              <li>Only 1 answer is correct</li>
+              <li>Questions will get progressively harder</li>
+            </ul>
+          </li>
+          <li>Each team will have a representative or captain that will answer the question</li>
+          <li>Each question has a monetary value and a time limit. The time limit increases as the monetary value increases.</li>
           <li>Answer correctly to earn the money and advance. An incorrect answer or running out of time means the team's turn ends for that question set.</li>
-          <li>The game timer must be started manually by the host for each question by clicking the "Start Timer" button.</li>
           <li>Teams have three lifelines:
             <ul className="list-decimal list-inside space-y-1 pl-6 mt-1">
                 <li><strong>50:50:</strong> Removes two incorrect answer choices.</li>
-                <li><strong>Phone a Friend:</strong> Allows consulting an external party (simulated).</li>
-                <li><strong>Ask Your Team:</strong> Allows the team to discuss the answer (simulated poll).</li>
+                <li><strong>Expert Panel:</strong> A panel of experts give their opinion on the question and their answer choice.</li>
+                <li><strong>Audience Poll:</strong> The audience along with all teams will be asked to raise their hand for the answer they believe is correct. Once our team finalizes the poll we will give the team the results.  The team can then use that information to make their final decision.</li>
             </ul>
           </li>
           <li>Each lifeline can be used only once per team throughout the game.</li>
           <li>The team with the highest score at the end of all questions wins the challenge!</li>
+          <li><strong>NO HELP</strong> from the audience is allowed unless the audience poll is being used</li>
+          <li><strong>NO CELL PHONE USE WILL BE ALLOWED</strong></li>
         </ul>
         <p className="font-semibold text-center pt-2">Good luck to all teams!</p>
       </CardContent>

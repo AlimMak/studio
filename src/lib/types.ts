@@ -6,7 +6,7 @@ export interface Question {
   correctAnswerIndex: number;
   moneyValue: number;
   timeLimit: number; // in seconds
-  originalText?: string; 
+  originalText?: string;
 }
 
 export interface Team {
@@ -20,4 +20,4 @@ export interface Team {
   };
 }
 
-export type GamePhase = 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';
+export type GamePhase = 'HOST_INTRODUCTION' | 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';
