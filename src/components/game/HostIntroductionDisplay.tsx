@@ -24,7 +24,7 @@ const HostIntroductionDisplay: React.FC<HostIntroductionDisplayProps> = ({ onPro
         </CardTitle>
       </CardHeader>
       <CardContent className={cn(
-        "space-y-4 text-card-foreground px-6 md:px-8 min-h-[200px]",
+        "space-y-4 text-card-foreground px-6 md:px-8 min-h-[100px]",
         !hostRevealed && "pb-2" // Reduce bottom padding when host is not revealed
       )}>
         {!hostRevealed ? (
@@ -42,14 +42,14 @@ const HostIntroductionDisplay: React.FC<HostIntroductionDisplayProps> = ({ onPro
               <Image
                 src="/host.jpg"
                 alt="Host Portrait"
-                width={150}
-                height={150}
-                className="rounded-full border-4 border-accent shadow-lg"
+                width={300}
+                height={300}
+                className="rounded-lg border-4 border-accent shadow-lg"
                 data-ai-hint="host portrait"
               />
             </div>
             <p className="text-xl text-center font-semibold text-accent animate-fade-in">
-              Sharif Maredia!
+              Sharif Maredia
             </p>
           </>
         )}

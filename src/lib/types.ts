@@ -20,4 +20,4 @@ export interface Team {
   };
 }
 
-export type GamePhase = 'HOST_INTRODUCTION' | 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';
+export type GamePhase = 'TITLE_SCREEN' | 'HOST_INTRODUCTION' | 'SETUP' | 'RULES' | 'PLAYING' | 'GAME_OVER';

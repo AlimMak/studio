@@ -18,14 +18,14 @@ import RulesDisplay from '@/components/game/RulesDisplay';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PartyPopper, ChevronRight, TimerIcon, PlayIcon } from 'lucide-react';
+import { PartyPopper, ChevronRight, TimerIcon, PlayIcon, Gamepad2 } from 'lucide-react';
 
 const MAX_TEAMS = 6;
 const AI_VARIATION_CHANCE = 0;
 const LIFELINE_DIALOG_DURATION = 30;
 
 export default function CrorepatiChallengePage() {
-  const [gamePhase, setGamePhase] = useState<GamePhase>('HOST_INTRODUCTION');
+  const [gamePhase, setGamePhase] = useState<GamePhase>('TITLE_SCREEN');
   const [teams, setTeams] = useState<Team[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -98,14 +98,18 @@ export default function CrorepatiChallengePage() {
     }
   }, [isAudioInitialized]);
 
+  const handleProceedToHostIntro = useCallback(() => {
+    setGamePhase('HOST_INTRODUCTION');
+    prevGamePhaseRef.current = 'TITLE_SCREEN';
+  }, []);
+
   const handleProceedToSetup = useCallback(() => {
     setGamePhase('SETUP');
     prevGamePhaseRef.current = 'HOST_INTRODUCTION';
   }, []);
 
   const handleStartGame = useCallback((teamNames: string[]) => {
-    // Reset parts of the game state relevant before rules, but not everything if coming from intro
-    if (gamePhase !== 'SETUP') { // Full reset only if not directly from setup (e.g., "Play Again")
+    if (gamePhase !== 'SETUP') { 
       resetGameStates();
     }
     const newTeams: Team[] = teamNames.map((name, index) => ({
@@ -213,13 +217,11 @@ export default function CrorepatiChallengePage() {
     if (gamePhase === 'PLAYING' && currentQuestion && teams.length > 0 && activeTeam) {
       const gameJustStarted = (prevGamePhaseRef.current === 'RULES') && gamePhase === 'PLAYING';
       const questionIndexChanged = prevCurrentQuestionIndexRef.current !== currentQuestionIndex && prevCurrentQuestionIndexRef.current !== undefined;
-      // const activeTeamIndexChanged = prevActiveTeamIndexRef.current !== activeTeamIndex && prevActiveTeamIndexRef.current !== undefined; // Team changes don't restart timer for same question
       const questionsJustLoaded = prevCurrentQuestionIndexRef.current === undefined && currentQuestionIndex === 0 && !!currentQuestion && (prevGamePhaseRef.current === 'RULES');
 
 
       if ( (gameJustStarted && !!currentQuestion) ||
            (questionIndexChanged && !!currentQuestion) ||
-           // (activeTeamIndexChanged && !!currentQuestion) || // Excluded for now
            questionsJustLoaded
       ) {
          isNewTurnInitialization = true;
@@ -243,19 +245,16 @@ export default function CrorepatiChallengePage() {
         setFiftyFiftyUsedThisTurn(false);
         setFiftyFiftyOptions(null);
         setAnswerRevealed(false); 
-        setTimerActive(false); // Timer is now manually started
+        setTimerActive(false); 
         setTimerManuallyStartedThisTurn(false); 
 
-    } else if (gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
-        console.log("TIMER_DEBUG: Game in HOST_INTRODUCTION, SETUP or RULES phase. Setting timerActive to false.");
+    } else if (gamePhase === 'TITLE_SCREEN' || gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP' || gamePhase === 'RULES') {
+        console.log("TIMER_DEBUG: Game in initial phases. Setting timerActive to false.");
         if (isAudioInitialized && timerTickAudioRef.current && !timerTickAudioRef.current.paused) {
-            console.log("Audio: Pausing audio (HOST_INTRODUCTION/SETUP/RULES phase).");
+            console.log("Audio: Pausing audio (Initial phases).");
             timerTickAudioRef.current.pause();
         }
         setTimerActive(false); 
-        if(gamePhase === 'HOST_INTRODUCTION' || gamePhase === 'SETUP'){ // Full reset for these initial phases
-            // resetGameStates(); // Calling full reset here might be too aggressive if coming from intro to setup
-        }
     } else if (gamePhase === 'GAME_OVER' || (gamePhase === 'PLAYING' && (answerRevealed || isLifelineDialogActive))) {
         if(timerActive) { 
             console.log("TIMER_DEBUG: Game over, answer revealed, or lifeline. Setting timerActive to false.");
@@ -267,7 +266,6 @@ export default function CrorepatiChallengePage() {
         }
     }
     
-    // Update prevRefs only if relevant data is present or phase is not PLAYING
     if ((gamePhase === 'PLAYING' && currentQuestion) || gamePhase !== 'PLAYING') {
       prevGamePhaseRef.current = gamePhase;
       prevCurrentQuestionIndexRef.current = currentQuestionIndex;
@@ -469,9 +467,23 @@ export default function CrorepatiChallengePage() {
       }
       setTimerActive(true);
       setTimerManuallyStartedThisTurn(true);
-      // The timer's useEffect will handle playing the audio when timerActive becomes true
     }
   };
+
+  if (gamePhase === 'TITLE_SCREEN') {
+    return (
+      <main className="flex-grow flex flex-col items-center justify-center p-4 animate-fade-in">
+        <GameLogo className="mb-12" />
+        <Button 
+          onClick={handleProceedToHostIntro} 
+          className="text-xl py-8 px-12 bg-accent hover:bg-accent/90 text-accent-foreground"
+          size="lg"
+        >
+          <Gamepad2 className="mr-3 w-7 h-7" /> Let's Play!
+        </Button>
+      </main>
+    );
+  }
 
   if (gamePhase === 'HOST_INTRODUCTION') {
     return (
@@ -516,7 +528,7 @@ export default function CrorepatiChallengePage() {
         <h2 className="text-2xl font-semibold mb-4">Final Scores:</h2>
         <Scoreboard teams={sortedTeams} />
         <Button onClick={() => {
-          resetGameStates(); // This will now more comprehensively reset
+          resetGameStates(); 
           setGamePhase('SETUP'); 
           }} className="mt-8 text-lg py-3 px-6">
           Play Again
@@ -539,7 +551,7 @@ export default function CrorepatiChallengePage() {
       <main className="flex-grow flex flex-col items-center justify-center p-4">
         <GameLogo className="mb-8" />
         <p className="text-xl">Error: Game in inconsistent state. Please restart.</p>
-         <Button onClick={() => { resetGameStates(); setGamePhase('HOST_INTRODUCTION'); }} className="mt-4">Restart</Button>
+         <Button onClick={() => { resetGameStates(); setGamePhase('TITLE_SCREEN'); }} className="mt-4">Restart</Button>
       </main>
     );
   }
